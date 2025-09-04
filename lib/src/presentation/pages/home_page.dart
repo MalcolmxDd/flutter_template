@@ -7,6 +7,8 @@ import 'package:flutter_template/src/presentation/pages/dashboard_page.dart';
 import 'package:flutter_template/src/presentation/pages/profile_page.dart';
 import 'package:flutter_template/src/presentation/pages/settings_page.dart';
 import 'package:flutter_template/src/presentation/pages/users_management_page.dart';
+import 'package:flutter_template/src/presentation/pages/scanner_page.dart';
+import 'package:flutter_template/src/presentation/pages/codes_history_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -23,6 +25,16 @@ class _HomePageState extends State<HomePage> {
     {
       'icon': Icons.dashboard_outlined,
       'text': 'Dashboard',
+      'requiredPermission': null,
+    },
+    {
+      'icon': Icons.qr_code_scanner,
+      'text': 'Escanear',
+      'requiredPermission': null,
+    },
+    {
+      'icon': Icons.history,
+      'text': 'Historial',
       'requiredPermission': null,
     },
     {
@@ -90,6 +102,8 @@ class _HomePageState extends State<HomePage> {
                   userRoles: userRoles,
                   onNavigateToPage: _onItemTapped, // Pasar el callback
                 ),
+                const ScannerPage(),
+                const CodesHistoryPage(),
                 ProfilePage(username: state.username, userRoles: userRoles),
                 const UsersManagementPage(),
                 SettingsPage(userRoles: userRoles),

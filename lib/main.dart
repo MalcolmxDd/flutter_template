@@ -6,6 +6,7 @@ import 'package:flutter_template/src/bloc/theme_bloc.dart';
 import 'package:flutter_template/src/bloc/theme_event.dart';
 import 'package:flutter_template/src/bloc/theme_state.dart';
 import 'package:flutter_template/src/bloc/users_bloc.dart';
+import 'package:flutter_template/src/bloc/scanner_bloc.dart';
 import 'package:flutter_template/src/data/database_helper.dart';
 import 'package:flutter_template/src/presentation/pages/splash_screen.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
@@ -36,6 +37,7 @@ class MyApp extends StatelessWidget {
         BlocProvider(create: (context) => AuthBloc(DatabaseHelper())),
         BlocProvider(create: (context) => ThemeBloc()..add(ThemeLoaded())),
         BlocProvider(create: (context) => UsersBloc(DatabaseHelper())),
+        BlocProvider(create: (context) => ScannerBloc(DatabaseHelper())),
       ],
       child: BlocBuilder<ThemeBloc, ThemeState>(
         builder: (context, state) {
