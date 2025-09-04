@@ -110,6 +110,24 @@ class DatabaseHelper {
       }
     }
 
+    if (oldVersion < 3) {
+      // Crear tabla de códigos escaneados si no existe
+      try {
+        await db.execute('''
+          CREATE TABLE IF NOT EXISTS scanned_codes(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            code TEXT NOT NULL,
+            type TEXT NOT NULL,
+            timestamp TEXT NOT NULL,
+            deviceId TEXT NOT NULL,
+            isSynced INTEGER NOT NULL DEFAULT 0
+          )
+        ''');
+      } catch (e) {
+        // La tabla ya existe, continuar
+      }
+    }
+
     // Asegurar que el usuario admin exista después de cualquier migración
     await _ensureAdminUserExists(db);
   }
@@ -272,6 +290,59 @@ class DatabaseHelper {
     var result = await dbClient.rawQuery(
       'SELECT COUNT(*) as count FROM users WHERE role = ? AND isActive = 1',
       [role],
+    );
+    return result.first['count'] as int;
+  }
+
+  // Métodos para manejar códigos escaneados
+  Future<int> saveScannedCode(Map<String, dynamic> scannedCode) async {
+    var dbClient = await database;
+    return await dbClient.insert('scanned_codes', scannedCode);
+  }
+
+  Future<List<Map<String, dynamic>>> getAllScannedCodes() async {
+    var dbClient = await database;
+    var result = await dbClient.query(
+      'scanned_codes',
+      orderBy: 'timestamp DESC',
+    );
+    return result;
+  }
+
+  Future<List<Map<String, dynamic>>> getUnsyncedCodes() async {
+    var dbClient = await database;
+    var result = await dbClient.query(
+      'scanned_codes',
+      where: 'isSynced = ?',
+      whereArgs: [0],
+      orderBy: 'timestamp ASC',
+    );
+    return result;
+  }
+
+  Future<int> markCodeAsSynced(int codeId) async {
+    var dbClient = await database;
+    return await dbClient.update(
+      'scanned_codes',
+      {'isSynced': 1},
+      where: 'id = ?',
+      whereArgs: [codeId],
+    );
+  }
+
+  Future<int> deleteScannedCode(int codeId) async {
+    var dbClient = await database;
+    return await dbClient.delete(
+      'scanned_codes',
+      where: 'id = ?',
+      whereArgs: [codeId],
+    );
+  }
+
+  Future<int> getScannedCodesCount() async {
+    var dbClient = await database;
+    var result = await dbClient.rawQuery(
+      'SELECT COUNT(*) as count FROM scanned_codes',
     );
     return result.first['count'] as int;
   }
