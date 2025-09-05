@@ -32,11 +32,7 @@ class _HomePageState extends State<HomePage> {
       'text': 'Escanear',
       'requiredPermission': null,
     },
-    {
-      'icon': Icons.history,
-      'text': 'Historial',
-      'requiredPermission': null,
-    },
+    {'icon': Icons.history, 'text': 'Historial', 'requiredPermission': null},
     {
       'icon': Icons.person_outline,
       'text': 'Perfil',
@@ -220,20 +216,24 @@ class _HomePageState extends State<HomePage> {
       ),
       child: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 15.0, vertical: 8.0),
+          padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
           child: GNav(
             rippleColor: Colors.grey[300]!,
             hoverColor: Colors.grey[100]!,
-            gap: 8,
+            gap: 4,
             activeColor: Colors.white,
-            iconSize: 24,
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            iconSize: 20,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             duration: const Duration(milliseconds: 400),
             tabBackgroundColor: theme.primaryColor,
             color: Colors.black,
             tabs: [
               for (final item in availableNavigationItems)
-                GButton(icon: item['icon'], text: item['text']),
+                GButton(
+                  icon: item['icon'],
+                  text: item['text'],
+                  textStyle: const TextStyle(fontSize: 10),
+                ),
             ],
             selectedIndex: _selectedIndex,
             onTabChange: _onItemTapped,

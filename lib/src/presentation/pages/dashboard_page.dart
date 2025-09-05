@@ -108,35 +108,76 @@ class _DashboardPageState extends State<DashboardPage> {
                 ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildStatCard(
-                      'Total Usuarios',
-                      state.totalUsers.toString(),
-                      Icons.people,
-                      Colors.blue,
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: _buildStatCard(
-                      'Administradores',
-                      state.adminUsers.toString(),
-                      Icons.admin_panel_settings,
-                      Colors.green,
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: _buildStatCard(
-                      'Usuarios Regulares',
-                      state.regularUsers.toString(),
-                      Icons.person,
-                      Colors.orange,
-                    ),
-                  ),
-                ],
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  if (constraints.maxWidth < 600) {
+                    // En pantallas pequeñas, mostrar en columna
+                    return Column(
+                      children: [
+                        _buildStatCard(
+                          'Total Usuarios',
+                          state.totalUsers.toString(),
+                          Icons.people,
+                          Colors.blue,
+                        ),
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _buildStatCard(
+                                'Administradores',
+                                state.adminUsers.toString(),
+                                Icons.admin_panel_settings,
+                                Colors.green,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: _buildStatCard(
+                                'Usuarios Regulares',
+                                state.regularUsers.toString(),
+                                Icons.person,
+                                Colors.orange,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    );
+                  } else {
+                    // En pantallas grandes, mostrar en fila
+                    return Row(
+                      children: [
+                        Expanded(
+                          child: _buildStatCard(
+                            'Total Usuarios',
+                            state.totalUsers.toString(),
+                            Icons.people,
+                            Colors.blue,
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: _buildStatCard(
+                            'Administradores',
+                            state.adminUsers.toString(),
+                            Icons.admin_panel_settings,
+                            Colors.green,
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: _buildStatCard(
+                            'Usuarios Regulares',
+                            state.regularUsers.toString(),
+                            Icons.person,
+                            Colors.orange,
+                          ),
+                        ),
+                      ],
+                    );
+                  }
+                },
               ),
             ],
           );

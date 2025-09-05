@@ -203,41 +203,43 @@ class _UsersManagementPageState extends State<UsersManagementPage> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Agregar Usuario'),
-        content: Form(
-          key: formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextFormField(
-                controller: usernameController,
-                decoration: const InputDecoration(
-                  labelText: 'Nombre de Usuario',
-                ),
-                validator: (value) =>
-                    value?.isEmpty == true ? 'Campo requerido' : null,
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: passwordController,
-                decoration: const InputDecoration(labelText: 'Contraseña'),
-                obscureText: true,
-                validator: (value) =>
-                    value?.isEmpty == true ? 'Campo requerido' : null,
-              ),
-              const SizedBox(height: 16),
-              DropdownButtonFormField<String>(
-                value: selectedRole,
-                decoration: const InputDecoration(labelText: 'Rol'),
-                items: const [
-                  DropdownMenuItem(value: 'user', child: Text('Usuario')),
-                  DropdownMenuItem(
-                    value: 'admin',
-                    child: Text('Administrador'),
+        content: SingleChildScrollView(
+          child: Form(
+            key: formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextFormField(
+                  controller: usernameController,
+                  decoration: const InputDecoration(
+                    labelText: 'Nombre de Usuario',
                   ),
-                ],
-                onChanged: (value) => selectedRole = value!,
-              ),
-            ],
+                  validator: (value) =>
+                      value?.isEmpty == true ? 'Campo requerido' : null,
+                ),
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: passwordController,
+                  decoration: const InputDecoration(labelText: 'Contraseña'),
+                  obscureText: true,
+                  validator: (value) =>
+                      value?.isEmpty == true ? 'Campo requerido' : null,
+                ),
+                const SizedBox(height: 16),
+                DropdownButtonFormField<String>(
+                  value: selectedRole,
+                  decoration: const InputDecoration(labelText: 'Rol'),
+                  items: const [
+                    DropdownMenuItem(value: 'user', child: Text('Usuario')),
+                    DropdownMenuItem(
+                      value: 'admin',
+                      child: Text('Administrador'),
+                    ),
+                  ],
+                  onChanged: (value) => selectedRole = value!,
+                ),
+              ],
+            ),
           ),
         ),
         actions: [
@@ -281,41 +283,43 @@ class _UsersManagementPageState extends State<UsersManagementPage> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Editar Usuario'),
-        content: Form(
-          key: formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextFormField(
-                controller: usernameController,
-                decoration: const InputDecoration(
-                  labelText: 'Nombre de Usuario',
-                ),
-                validator: (value) =>
-                    value?.isEmpty == true ? 'Campo requerido' : null,
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: passwordController,
-                decoration: const InputDecoration(
-                  labelText: 'Nueva Contraseña (dejar vacío para no cambiar)',
-                ),
-                obscureText: true,
-              ),
-              const SizedBox(height: 16),
-              DropdownButtonFormField<String>(
-                value: selectedRole,
-                decoration: const InputDecoration(labelText: 'Rol'),
-                items: const [
-                  DropdownMenuItem(value: 'user', child: Text('Usuario')),
-                  DropdownMenuItem(
-                    value: 'admin',
-                    child: Text('Administrador'),
+        content: SingleChildScrollView(
+          child: Form(
+            key: formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextFormField(
+                  controller: usernameController,
+                  decoration: const InputDecoration(
+                    labelText: 'Nombre de Usuario',
                   ),
-                ],
-                onChanged: (value) => selectedRole = value!,
-              ),
-            ],
+                  validator: (value) =>
+                      value?.isEmpty == true ? 'Campo requerido' : null,
+                ),
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: passwordController,
+                  decoration: const InputDecoration(
+                    labelText: 'Nueva Contraseña (dejar vacío para no cambiar)',
+                  ),
+                  obscureText: true,
+                ),
+                const SizedBox(height: 16),
+                DropdownButtonFormField<String>(
+                  value: selectedRole,
+                  decoration: const InputDecoration(labelText: 'Rol'),
+                  items: const [
+                    DropdownMenuItem(value: 'user', child: Text('Usuario')),
+                    DropdownMenuItem(
+                      value: 'admin',
+                      child: Text('Administrador'),
+                    ),
+                  ],
+                  onChanged: (value) => selectedRole = value!,
+                ),
+              ],
+            ),
           ),
         ),
         actions: [

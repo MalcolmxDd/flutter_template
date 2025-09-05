@@ -39,12 +39,16 @@ class _CodesHistoryPageState extends State<CodesHistoryPage> {
 
     // Filtrar por tipo
     if (_filterType != 'all') {
-      filteredCodes = filteredCodes.where((code) => code['type'] == _filterType).toList();
+      filteredCodes = filteredCodes
+          .where((code) => code['type'] == _filterType)
+          .toList();
     }
 
     // Filtrar por estado de sincronización
     if (_showOnlyUnsynced) {
-      filteredCodes = filteredCodes.where((code) => code['isSynced'] == 0).toList();
+      filteredCodes = filteredCodes
+          .where((code) => code['isSynced'] == 0)
+          .toList();
     }
 
     // Filtrar por búsqueda
@@ -52,7 +56,7 @@ class _CodesHistoryPageState extends State<CodesHistoryPage> {
       filteredCodes = filteredCodes.where((code) {
         final searchTerm = _searchController.text.toLowerCase();
         return code['code'].toString().toLowerCase().contains(searchTerm) ||
-               code['type'].toString().toLowerCase().contains(searchTerm);
+            code['type'].toString().toLowerCase().contains(searchTerm);
       }).toList();
     }
 
@@ -83,9 +87,7 @@ class _CodesHistoryPageState extends State<CodesHistoryPage> {
           // Filtros y búsqueda
           _buildFiltersSection(),
           // Lista de códigos
-          Expanded(
-            child: _buildCodesList(),
-          ),
+          Expanded(child: _buildCodesList()),
         ],
       ),
     );
@@ -120,50 +122,150 @@ class _CodesHistoryPageState extends State<CodesHistoryPage> {
           ),
           const SizedBox(height: 16),
           // Filtros
-          Row(
-            children: [
-              Expanded(
-                child: DropdownButtonFormField<String>(
-                  value: _filterType,
-                  decoration: const InputDecoration(
-                    labelText: 'Tipo de Código',
-                    border: OutlineInputBorder(),
-                    filled: true,
-                    fillColor: Colors.white,
-                  ),
-                  items: [
-                    const DropdownMenuItem(value: 'all', child: Text('Todos')),
-                    const DropdownMenuItem(value: 'QR', child: Text('QR Code')),
-                    const DropdownMenuItem(value: 'CODE128', child: Text('Code 128')),
-                    const DropdownMenuItem(value: 'CODE39', child: Text('Code 39')),
-                    const DropdownMenuItem(value: 'EAN13', child: Text('EAN-13')),
-                    const DropdownMenuItem(value: 'EAN8', child: Text('EAN-8')),
-                    const DropdownMenuItem(value: 'UPCA', child: Text('UPC-A')),
-                    const DropdownMenuItem(value: 'UPCE', child: Text('UPC-E')),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              if (constraints.maxWidth < 600) {
+                // En pantallas pequeñas, mostrar en columna
+                return Column(
+                  children: [
+                    DropdownButtonFormField<String>(
+                      value: _filterType,
+                      decoration: const InputDecoration(
+                        labelText: 'Tipo de Código',
+                        border: OutlineInputBorder(),
+                        filled: true,
+                        fillColor: Colors.white,
+                      ),
+                      items: [
+                        const DropdownMenuItem(
+                          value: 'all',
+                          child: Text('Todos'),
+                        ),
+                        const DropdownMenuItem(
+                          value: 'QR',
+                          child: Text('QR Code'),
+                        ),
+                        const DropdownMenuItem(
+                          value: 'CODE128',
+                          child: Text('Code 128'),
+                        ),
+                        const DropdownMenuItem(
+                          value: 'CODE39',
+                          child: Text('Code 39'),
+                        ),
+                        const DropdownMenuItem(
+                          value: 'EAN13',
+                          child: Text('EAN-13'),
+                        ),
+                        const DropdownMenuItem(
+                          value: 'EAN8',
+                          child: Text('EAN-8'),
+                        ),
+                        const DropdownMenuItem(
+                          value: 'UPCA',
+                          child: Text('UPC-A'),
+                        ),
+                        const DropdownMenuItem(
+                          value: 'UPCE',
+                          child: Text('UPC-E'),
+                        ),
+                      ],
+                      onChanged: (value) {
+                        setState(() {
+                          _filterType = value!;
+                        });
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    // Checkbox para mostrar solo no sincronizados
+                    Row(
+                      children: [
+                        Checkbox(
+                          value: _showOnlyUnsynced,
+                          onChanged: (value) {
+                            setState(() {
+                              _showOnlyUnsynced = value!;
+                            });
+                          },
+                        ),
+                        const Expanded(child: Text('Solo no sincronizados')),
+                      ],
+                    ),
                   ],
-                  onChanged: (value) {
-                    setState(() {
-                      _filterType = value!;
-                    });
-                  },
-                ),
-              ),
-              const SizedBox(width: 16),
-              // Checkbox para mostrar solo no sincronizados
-              Row(
-                children: [
-                  Checkbox(
-                    value: _showOnlyUnsynced,
-                    onChanged: (value) {
-                      setState(() {
-                        _showOnlyUnsynced = value!;
-                      });
-                    },
-                  ),
-                  const Text('Solo no sincronizados'),
-                ],
-              ),
-            ],
+                );
+              } else {
+                // En pantallas grandes, mostrar en fila
+                return Row(
+                  children: [
+                    Expanded(
+                      child: DropdownButtonFormField<String>(
+                        value: _filterType,
+                        decoration: const InputDecoration(
+                          labelText: 'Tipo de Código',
+                          border: OutlineInputBorder(),
+                          filled: true,
+                          fillColor: Colors.white,
+                        ),
+                        items: [
+                          const DropdownMenuItem(
+                            value: 'all',
+                            child: Text('Todos'),
+                          ),
+                          const DropdownMenuItem(
+                            value: 'QR',
+                            child: Text('QR Code'),
+                          ),
+                          const DropdownMenuItem(
+                            value: 'CODE128',
+                            child: Text('Code 128'),
+                          ),
+                          const DropdownMenuItem(
+                            value: 'CODE39',
+                            child: Text('Code 39'),
+                          ),
+                          const DropdownMenuItem(
+                            value: 'EAN13',
+                            child: Text('EAN-13'),
+                          ),
+                          const DropdownMenuItem(
+                            value: 'EAN8',
+                            child: Text('EAN-8'),
+                          ),
+                          const DropdownMenuItem(
+                            value: 'UPCA',
+                            child: Text('UPC-A'),
+                          ),
+                          const DropdownMenuItem(
+                            value: 'UPCE',
+                            child: Text('UPC-E'),
+                          ),
+                        ],
+                        onChanged: (value) {
+                          setState(() {
+                            _filterType = value!;
+                          });
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    // Checkbox para mostrar solo no sincronizados
+                    Row(
+                      children: [
+                        Checkbox(
+                          value: _showOnlyUnsynced,
+                          onChanged: (value) {
+                            setState(() {
+                              _showOnlyUnsynced = value!;
+                            });
+                          },
+                        ),
+                        const Text('Solo no sincronizados'),
+                      ],
+                    ),
+                  ],
+                );
+              }
+            },
           ),
         ],
       ),
@@ -177,22 +279,24 @@ class _CodesHistoryPageState extends State<CodesHistoryPage> {
           return const Center(child: CircularProgressIndicator());
         } else if (state is CodesLoaded) {
           final filteredCodes = _filterCodes(state.codes);
-          
+
           if (filteredCodes.isEmpty) {
             return Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Icon(
-                    _showOnlyUnsynced ? Icons.cloud_done : Icons.qr_code_scanner_outlined,
+                    _showOnlyUnsynced
+                        ? Icons.cloud_done
+                        : Icons.qr_code_scanner_outlined,
                     size: 64,
                     color: Colors.grey,
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    _showOnlyUnsynced 
-                      ? 'No hay códigos pendientes de sincronización'
-                      : 'No hay códigos que coincidan con los filtros',
+                    _showOnlyUnsynced
+                        ? 'No hay códigos pendientes de sincronización'
+                        : 'No hay códigos que coincidan con los filtros',
                     textAlign: TextAlign.center,
                     style: const TextStyle(fontSize: 16),
                   ),
@@ -247,10 +351,7 @@ class _CodesHistoryPageState extends State<CodesHistoryPage> {
         ),
         title: Text(
           code['code'],
-          style: const TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 14,
-          ),
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
         ),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -301,19 +402,17 @@ class _CodesHistoryPageState extends State<CodesHistoryPage> {
                   children: [
                     const Text('Código completo: '),
                     Expanded(
-                                             child: Container(
-                         padding: const EdgeInsets.all(8),
-                         decoration: BoxDecoration(
-                           color: Colors.white,
-                           borderRadius: BorderRadius.circular(4),
-                         ),
-                         child: SelectableText(
-                           code['code'],
-                           style: const TextStyle(
-                             fontFamily: 'monospace',
-                           ),
-                         ),
-                       ),
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: SelectableText(
+                          code['code'],
+                          style: const TextStyle(fontFamily: 'monospace'),
+                        ),
+                      ),
                     ),
                   ],
                 ),
@@ -324,14 +423,16 @@ class _CodesHistoryPageState extends State<CodesHistoryPage> {
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
                     ElevatedButton.icon(
-                      onPressed: isSynced ? null : () {
-                        // Aquí podrías implementar re-sincronización manual
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Re-sincronizando código...'),
-                          ),
-                        );
-                      },
+                      onPressed: isSynced
+                          ? null
+                          : () {
+                              // Aquí podrías implementar re-sincronización manual
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Re-sincronizando código...'),
+                                ),
+                              );
+                            },
                       icon: const Icon(Icons.sync),
                       label: const Text('Re-sincronizar'),
                       style: ElevatedButton.styleFrom(
