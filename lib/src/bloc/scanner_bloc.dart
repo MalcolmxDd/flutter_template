@@ -84,7 +84,7 @@ class ScannerBloc extends Bloc<ScannerEvent, ScannerState> {
     try {
       await _databaseHelper.deleteScannedCode(event.codeId);
       emit(CodeDeleted(event.codeId));
-      
+
       // Recargar la lista de códigos después de eliminar
       final codes = await _databaseHelper.getAllScannedCodes();
       emit(CodesLoaded(codes));
