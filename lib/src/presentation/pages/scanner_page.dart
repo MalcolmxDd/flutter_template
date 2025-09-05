@@ -25,7 +25,7 @@ class _ScannerPageState extends State<ScannerPage> {
       facing: CameraFacing.back,
       torchEnabled: false,
     );
-    
+
     // Cargar códigos existentes
     context.read<ScannerBloc>().add(LoadScannedCodes());
   }
@@ -43,7 +43,7 @@ class _ScannerPageState extends State<ScannerPage> {
     for (final barcode in barcodes) {
       final String code = barcode.rawValue ?? '';
       final String type = _getBarcodeType(barcode.type);
-      
+
       if (code.isNotEmpty) {
         setState(() {
           _isScanning = false;
@@ -52,18 +52,18 @@ class _ScannerPageState extends State<ScannerPage> {
         });
 
         // Generar ID único del dispositivo
-        final String deviceId = Platform.isAndroid ? 'android_${DateTime.now().millisecondsSinceEpoch}' : 'ios_${DateTime.now().millisecondsSinceEpoch}';
-        
+        final String deviceId = Platform.isAndroid
+            ? 'android_${DateTime.now().millisecondsSinceEpoch}'
+            : 'ios_${DateTime.now().millisecondsSinceEpoch}';
+
         // Enviar evento para escanear el código
-        context.read<ScannerBloc>().add(ScanCode(
-          code: code,
-          type: type,
-          deviceId: deviceId,
-        ));
+        context.read<ScannerBloc>().add(
+          ScanCode(code: code, type: type, deviceId: deviceId),
+        );
 
         // Mostrar confirmación
         _showScanConfirmation(code, type);
-        
+
         // Pausar escaneo por 2 segundos para evitar múltiples escaneos
         Future.delayed(const Duration(seconds: 2), () {
           if (mounted) {
@@ -72,7 +72,7 @@ class _ScannerPageState extends State<ScannerPage> {
             });
           }
         });
-        
+
         break;
       }
     }
@@ -127,9 +127,11 @@ class _ScannerPageState extends State<ScannerPage> {
         backgroundColor: Theme.of(context).primaryColor,
         actions: [
           IconButton(
-            icon: Icon(_scannerController?.torchEnabled == true 
-              ? Icons.flash_on 
-              : Icons.flash_off),
+            icon: Icon(
+              _scannerController?.torchEnabled == true
+                  ? Icons.flash_on
+                  : Icons.flash_off,
+            ),
             onPressed: _toggleTorch,
           ),
           IconButton(
@@ -173,9 +175,7 @@ class _ScannerPageState extends State<ScannerPage> {
 
   Widget _buildScannerOverlay() {
     return Container(
-      decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.5),
-      ),
+      decoration: BoxDecoration(color: Colors.black.withOpacity(0.5)),
       child: Center(
         child: Container(
           width: 250,
@@ -279,7 +279,11 @@ class _ScannerPageState extends State<ScannerPage> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.qr_code_scanner_outlined, size: 48, color: Colors.grey),
+                  Icon(
+                    Icons.qr_code_scanner_outlined,
+                    size: 48,
+                    color: Colors.grey,
+                  ),
                   SizedBox(height: 8),
                   Text('No hay códigos escaneados aún'),
                 ],
@@ -305,7 +309,9 @@ class _ScannerPageState extends State<ScannerPage> {
                       color: Colors.grey[50],
                       child: ListTile(
                         leading: Icon(
-                          code['type'] == 'QR Code' ? Icons.qr_code : Icons.qr_code_2,
+                          code['type'] == 'QR Code'
+                              ? Icons.qr_code
+                              : Icons.qr_code_2,
                           color: Theme.of(context).primaryColor,
                         ),
                         title: Text(
@@ -319,8 +325,12 @@ class _ScannerPageState extends State<ScannerPage> {
                           style: const TextStyle(fontSize: 10),
                         ),
                         trailing: Icon(
-                          code['isSynced'] == 1 ? Icons.cloud_done : Icons.cloud_upload,
-                          color: code['isSynced'] == 1 ? Colors.green : Colors.orange,
+                          code['isSynced'] == 1
+                              ? Icons.cloud_done
+                              : Icons.cloud_upload,
+                          color: code['isSynced'] == 1
+                              ? Colors.green
+                              : Colors.orange,
                           size: 16,
                         ),
                       ),
