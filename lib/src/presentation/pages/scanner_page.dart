@@ -15,7 +15,7 @@ class _ScannerPageState extends State<ScannerPage> {
   MobileScannerController? _scannerController;
   bool _isScanning = true;
   String _lastScannedCode = '';
-  String _lastScannedType = '';
+  DateTime? _lastScanTime;
 
   @override
   void initState() {
@@ -45,16 +45,25 @@ class _ScannerPageState extends State<ScannerPage> {
       final String type = _getBarcodeType(barcode.type);
 
       if (code.isNotEmpty) {
+        final now = DateTime.now();
+        
+        // Verificar si es el mismo código escaneado recientemente (dentro de 3 segundos)
+        if (_lastScannedCode == code && 
+            _lastScanTime != null && 
+            now.difference(_lastScanTime!).inSeconds < 3) {
+          return; // Ignorar escaneo duplicado
+        }
+
         setState(() {
           _isScanning = false;
           _lastScannedCode = code;
-          _lastScannedType = type;
+          _lastScanTime = now;
         });
 
         // Generar ID único del dispositivo
         final String deviceId = Platform.isAndroid
-            ? 'android_${DateTime.now().millisecondsSinceEpoch}'
-            : 'ios_${DateTime.now().millisecondsSinceEpoch}';
+            ? 'android_${now.millisecondsSinceEpoch}'
+            : 'ios_${now.millisecondsSinceEpoch}';
 
         // Enviar evento para escanear el código
         context.read<ScannerBloc>().add(
@@ -64,8 +73,8 @@ class _ScannerPageState extends State<ScannerPage> {
         // Mostrar confirmación
         _showScanConfirmation(code, type);
 
-        // Pausar escaneo por 2 segundos para evitar múltiples escaneos
-        Future.delayed(const Duration(seconds: 2), () {
+        // Pausar escaneo por 3 segundos para evitar múltiples escaneos
+        Future.delayed(const Duration(seconds: 3), () {
           if (mounted) {
             setState(() {
               _isScanning = true;
