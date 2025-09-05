@@ -297,6 +297,22 @@ class DatabaseHelper {
   // Métodos para manejar códigos escaneados
   Future<int> saveScannedCode(Map<String, dynamic> scannedCode) async {
     var dbClient = await database;
+    
+    // Verificar si el código ya existe en los últimos 5 segundos
+    final now = DateTime.now();
+    final fiveSecondsAgo = now.subtract(const Duration(seconds: 5));
+    
+    final existingCodes = await dbClient.query(
+      'scanned_codes',
+      where: 'code = ? AND timestamp > ?',
+      whereArgs: [scannedCode['code'], fiveSecondsAgo.toIso8601String()],
+    );
+    
+    // Si ya existe un código similar recientemente, no guardar duplicado
+    if (existingCodes.isNotEmpty) {
+      return existingCodes.first['id'] as int;
+    }
+    
     return await dbClient.insert('scanned_codes', scannedCode);
   }
 
