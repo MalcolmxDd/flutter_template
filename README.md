@@ -141,3 +141,4 @@ Este proyecto está bajo la Licencia MIT. Ver el archivo `LICENSE` para más det
 ## Contacto
 
 Para preguntas o soporte, contactar al equipo de desarrollo.
+
