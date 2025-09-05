@@ -12,6 +12,7 @@ class ScannerBloc extends Bloc<ScannerEvent, ScannerState> {
     on<ScanCode>(_onScanCode);
     on<SaveScannedCode>(_onSaveScannedCode);
     on<LoadScannedCodes>(_onLoadScannedCodes);
+    on<DeleteScannedCode>(_onDeleteScannedCode);
     on<SyncWithServer>(_onSyncWithServer);
   }
 
@@ -68,6 +69,23 @@ class ScannerBloc extends Bloc<ScannerEvent, ScannerState> {
   ) async {
     emit(ScannerLoading());
     try {
+      final codes = await _databaseHelper.getAllScannedCodes();
+      emit(CodesLoaded(codes));
+    } catch (e) {
+      emit(ScannerError(error: e.toString()));
+    }
+  }
+
+  Future<void> _onDeleteScannedCode(
+    DeleteScannedCode event,
+    Emitter<ScannerState> emit,
+  ) async {
+    emit(ScannerLoading());
+    try {
+      await _databaseHelper.deleteScannedCode(event.codeId);
+      emit(CodeDeleted(event.codeId));
+      
+      // Recargar la lista de códigos después de eliminar
       final codes = await _databaseHelper.getAllScannedCodes();
       emit(CodesLoaded(codes));
     } catch (e) {

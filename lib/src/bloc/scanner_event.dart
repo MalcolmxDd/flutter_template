@@ -39,4 +39,13 @@ class SaveScannedCode extends ScannerEvent {
 
 class LoadScannedCodes extends ScannerEvent {}
 
+class DeleteScannedCode extends ScannerEvent {
+  final int codeId;
+
+  const DeleteScannedCode({required this.codeId});
+
+  @override
+  List<Object> get props => [codeId];
+}
+
 class SyncWithServer extends ScannerEvent {}

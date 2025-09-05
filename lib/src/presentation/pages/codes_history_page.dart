@@ -476,11 +476,14 @@ class _CodesHistoryPageState extends State<CodesHistoryPage> {
           ),
           ElevatedButton(
             onPressed: () {
-              // Aquí implementarías la eliminación
               Navigator.pop(context);
+              // Eliminar el código de la base de datos
+              context.read<ScannerBloc>().add(
+                DeleteScannedCode(codeId: code['id']),
+              );
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
-                  content: Text('Código eliminado'),
+                  content: Text('Código eliminado exitosamente'),
                   backgroundColor: Colors.red,
                 ),
               );
