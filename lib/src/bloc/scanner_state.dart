@@ -38,6 +38,15 @@ class CodesLoaded extends ScannerState {
   List<Object> get props => [codes];
 }
 
+class CodeDeleted extends ScannerState {
+  final int deletedCodeId;
+
+  const CodeDeleted(this.deletedCodeId);
+
+  @override
+  List<Object> get props => [deletedCodeId];
+}
+
 class SyncCompleted extends ScannerState {}
 
 class ScannerError extends ScannerState {
