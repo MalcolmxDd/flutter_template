@@ -14,7 +14,7 @@ class LoginPage extends StatefulWidget {
 
 class _LoginPageState extends State<LoginPage>
     with SingleTickerProviderStateMixin {
-  final TextEditingController _usernameController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
@@ -43,7 +43,7 @@ class _LoginPageState extends State<LoginPage>
   @override
   void dispose() {
     _animationController.dispose();
-    _usernameController.dispose();
+    _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
@@ -113,7 +113,7 @@ class _LoginPageState extends State<LoginPage>
                     child: SlideTransition(
                       position: _slideAnimation,
                       child: _buildTextField(
-                        controller: _usernameController,
+                        controller: _emailController,
                         labelText: 'Correo Electrónico',
                         icon: Icons.email_outlined,
                       ),
@@ -152,11 +152,11 @@ class _LoginPageState extends State<LoginPage>
                               ),
                             ),
                             onPressed: () {
-                              final username = _usernameController.text;
+                              final email = _emailController.text;
                               final password = _passwordController.text;
                               context.read<AuthBloc>().add(
                                 LoginButtonPressed(
-                                  username: username,
+                                  email: email,
                                   password: password,
                                 ),
                               );

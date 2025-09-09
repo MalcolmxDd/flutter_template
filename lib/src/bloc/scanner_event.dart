@@ -10,37 +10,37 @@ abstract class ScannerEvent extends Equatable {
 class ScanCode extends ScannerEvent {
   final String code;
   final String type;
-  final String deviceId;
+  final String? content;
 
   const ScanCode({
     required this.code,
     required this.type,
-    required this.deviceId,
+    this.content,
   });
 
   @override
-  List<Object> get props => [code, type, deviceId];
+  List<Object> get props => [code, type, content ?? ''];
 }
 
 class SaveScannedCode extends ScannerEvent {
   final String code;
   final String type;
-  final String deviceId;
+  final String? content;
 
   const SaveScannedCode({
     required this.code,
     required this.type,
-    required this.deviceId,
+    this.content,
   });
 
   @override
-  List<Object> get props => [code, type, deviceId];
+  List<Object> get props => [code, type, content ?? ''];
 }
 
 class LoadScannedCodes extends ScannerEvent {}
 
 class DeleteScannedCode extends ScannerEvent {
-  final int codeId;
+  final String codeId;
 
   const DeleteScannedCode({required this.codeId});
 

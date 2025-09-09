@@ -6,13 +6,13 @@ import 'package:flutter_template/src/presentation/widgets/weekly_activity_chart.
 
 class DashboardPage extends StatefulWidget {
   final String username;
-  final List<String> userRoles;
+  final String userRole;
   final Function(int)? onNavigateToPage;
 
   const DashboardPage({
     super.key,
     required this.username,
-    required this.userRoles,
+    required this.userRole,
     this.onNavigateToPage,
   });
 
@@ -25,7 +25,7 @@ class _DashboardPageState extends State<DashboardPage> {
   void initState() {
     super.initState();
     // Cargar estadísticas de usuarios si es admin
-    if (widget.userRoles.contains('admin')) {
+    if (widget.userRole == 'admin') {
       context.read<UsersBloc>().add(LoadUserStats());
     }
   }
@@ -33,7 +33,7 @@ class _DashboardPageState extends State<DashboardPage> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isAdmin = widget.userRoles.contains('admin');
+    final isAdmin = widget.userRole == 'admin';
 
     return Scaffold(
       body: ListView(

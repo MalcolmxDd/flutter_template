@@ -5,6 +5,7 @@ import 'package:flutter_template/src/presentation/pages/auth/login_page.dart';
 
 class RegisterPage extends StatelessWidget {
   final TextEditingController _usernameController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
 
   RegisterPage({super.key});
@@ -57,6 +58,12 @@ class RegisterPage extends StatelessWidget {
                   const SizedBox(height: 30),
                   _buildTextField(
                     controller: _usernameController,
+                    labelText: 'Nombre de Usuario',
+                    icon: Icons.person_outline,
+                  ),
+                  const SizedBox(height: 16),
+                  _buildTextField(
+                    controller: _emailController,
                     labelText: 'Correo Electrónico',
                     icon: Icons.email_outlined,
                   ),
@@ -82,10 +89,12 @@ class RegisterPage extends StatelessWidget {
                         ),
                         onPressed: () {
                           final username = _usernameController.text;
+                          final email = _emailController.text;
                           final password = _passwordController.text;
                           context.read<AuthBloc>().add(
                             RegisterButtonPressed(
                               username: username,
+                              email: email,
                               password: password,
                             ),
                           );

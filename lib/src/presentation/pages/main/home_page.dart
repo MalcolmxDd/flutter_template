@@ -50,11 +50,11 @@ class _HomePageState extends State<HomePage> {
     },
   ];
 
-  bool _hasPermission(List<String> userRoles, String? requiredPermission) {
+  bool _hasPermission(String userRole, String? requiredPermission) {
     if (requiredPermission == null) {
       return true; // No specific permission required
     }
-    return userRoles.contains(requiredPermission);
+    return userRole == requiredPermission;
   }
 
   void _onItemTapped(int index) {
@@ -90,19 +90,19 @@ class _HomePageState extends State<HomePage> {
         body: BlocBuilder<AuthBloc, AuthState>(
           builder: (context, state) {
             if (state is AuthSuccess) {
-              final List<String> userRoles = state.roles;
+              final String userRole = state.role;
 
               final List<Widget> allPages = [
                 DashboardPage(
                   username: state.username,
-                  userRoles: userRoles,
+                  userRole: userRole,
                   onNavigateToPage: _onItemTapped, // Pasar el callback
                 ),
                 const ScannerPage(),
                 const CodesHistoryPage(),
-                ProfilePage(username: state.username, userRoles: userRoles),
+                ProfilePage(username: state.username, userRole: userRole),
                 const UsersManagementPage(),
-                SettingsPage(userRoles: userRoles),
+                SettingsPage(userRole: userRole),
               ];
 
               // Removed unused availableNavigationItems variable
@@ -110,7 +110,7 @@ class _HomePageState extends State<HomePage> {
               final List<Widget> availablePages = [];
               for (int i = 0; i < _navigationItems.length; i++) {
                 if (_hasPermission(
-                  userRoles,
+                  userRole,
                   _navigationItems[i]['requiredPermission'],
                 )) {
                   availablePages.add(allPages[i]);
@@ -123,8 +123,8 @@ class _HomePageState extends State<HomePage> {
               }
 
               return Scaffold(
-                drawer: _buildDrawer(theme, userRoles),
-                bottomNavigationBar: _buildBottomNavBar(theme, userRoles),
+                drawer: _buildDrawer(theme, userRole),
+                bottomNavigationBar: _buildBottomNavBar(theme, userRole),
                 body: AnimatedSwitcher(
                   duration: const Duration(milliseconds: 300),
                   transitionBuilder:
@@ -171,9 +171,9 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildDrawer(ThemeData theme, List<String> userRoles) {
+  Widget _buildDrawer(ThemeData theme, String userRole) {
     final List<Map<String, dynamic>> availableNavigationItems = _navigationItems
-        .where((item) => _hasPermission(userRoles, item['requiredPermission']))
+        .where((item) => _hasPermission(userRole, item['requiredPermission']))
         .toList();
 
     return Drawer(
@@ -202,9 +202,9 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildBottomNavBar(ThemeData theme, List<String> userRoles) {
+  Widget _buildBottomNavBar(ThemeData theme, String userRole) {
     final List<Map<String, dynamic>> availableNavigationItems = _navigationItems
-        .where((item) => _hasPermission(userRoles, item['requiredPermission']))
+        .where((item) => _hasPermission(userRole, item['requiredPermission']))
         .toList();
 
     return Container(

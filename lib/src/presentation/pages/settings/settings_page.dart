@@ -7,13 +7,13 @@ import 'package:flutter_template/src/presentation/widgets/settings_section_title
 import 'package:flutter_template/src/presentation/widgets/settings_tile.dart';
 
 class SettingsPage extends StatelessWidget {
-  final List<String> userRoles;
+  final String userRole;
 
-  const SettingsPage({super.key, required this.userRoles});
+  const SettingsPage({super.key, required this.userRole});
 
   @override
   Widget build(BuildContext context) {
-    final isAdmin = userRoles.contains('admin');
+    final isAdmin = userRole == 'admin';
 
     return Scaffold(
       body: ListView(

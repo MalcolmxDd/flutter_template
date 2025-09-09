@@ -76,23 +76,23 @@ class _UsersManagementPageState extends State<UsersManagementPage> {
       itemCount: users.length,
       itemBuilder: (context, index) {
         final user = users[index];
-        final isActive = user['isActive'] == 1;
+        final isActive = user['isActive'] == true || user['isActive'] == 1;
 
         return Card(
           margin: const EdgeInsets.only(bottom: 12),
           color: isActive ? Colors.grey[50] : Colors.grey[200],
           child: ListTile(
             leading: CircleAvatar(
-              backgroundColor: _getRoleColor(user['role']),
+              backgroundColor: _getRoleColor(user['roles'] ?? 'user'),
               child: Icon(
-                user['role'] == 'admin'
+                (user['roles'] ?? 'user') == 'admin'
                     ? Icons.admin_panel_settings
                     : Icons.person,
                 color: Colors.white,
               ),
             ),
             title: Text(
-              user['fullName'] ?? user['username'],
+              user['fullName'] ?? user['username'] ?? 'Sin nombre',
               style: TextStyle(
                 fontWeight: FontWeight.bold,
                 color: isActive ? Colors.black : Colors.grey[600],
@@ -101,12 +101,12 @@ class _UsersManagementPageState extends State<UsersManagementPage> {
             subtitle: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Usuario: ${user['username']}'),
+                Text('Usuario: ${user['username'] ?? 'Sin usuario'}'),
                 if (user['email'] != null) Text('Email: ${user['email']}'),
                 Text(
-                  'Rol: ${user['role'] == 'admin' ? 'Administrador' : 'Usuario'}',
+                  'Rol: ${(user['roles'] ?? 'user') == 'admin' ? 'Administrador' : 'Usuario'}',
                   style: TextStyle(
-                    color: _getRoleColor(user['role']),
+                    color: _getRoleColor(user['roles'] ?? 'user'),
                     fontWeight: FontWeight.w500,
                   ),
                 ),
@@ -253,7 +253,8 @@ class _UsersManagementPageState extends State<UsersManagementPage> {
                 final userData = {
                   'username': usernameController.text,
                   'password': passwordController.text,
-                  'role': selectedRole,
+                  'email': '${usernameController.text}@example.com',
+                  'roles': selectedRole,
                 };
 
                 context.read<UsersBloc>().add(AddUser(userData));
@@ -275,9 +276,10 @@ class _UsersManagementPageState extends State<UsersManagementPage> {
 
   void _showEditUserDialog(BuildContext context, Map<String, dynamic> user) {
     final formKey = GlobalKey<FormState>();
-    final usernameController = TextEditingController(text: user['username']);
+    final usernameController = TextEditingController(text: user['username'] ?? '');
     final passwordController = TextEditingController();
-    String selectedRole = user['role'];
+    String selectedRole = user['roles'] ?? 'user';
+    bool isActive = user['isActive'] ?? true;
 
     showDialog(
       context: context,
@@ -318,6 +320,18 @@ class _UsersManagementPageState extends State<UsersManagementPage> {
                   ],
                   onChanged: (value) => selectedRole = value!,
                 ),
+                const SizedBox(height: 16),
+                StatefulBuilder(
+                  builder: (context, setState) => SwitchListTile(
+                    title: const Text('Usuario Activo'),
+                    value: isActive,
+                    onChanged: (bool value) {
+                      setState(() {
+                        isActive = value;
+                      });
+                    },
+                  ),
+                ),
               ],
             ),
           ),
@@ -331,9 +345,11 @@ class _UsersManagementPageState extends State<UsersManagementPage> {
             onPressed: () {
               if (formKey.currentState!.validate()) {
                 final userData = {
-                  'id': user['id'],
+                  'uid': user['uid'] ?? user['id'] ?? '',
                   'username': usernameController.text,
-                  'role': selectedRole,
+                  'email': user['email'] ?? '',
+                  'roles': selectedRole,
+                  'isActive': isActive,
                 };
 
                 // Solo incluir password si se ingresó uno nuevo
@@ -367,7 +383,7 @@ class _UsersManagementPageState extends State<UsersManagementPage> {
       builder: (context) => AlertDialog(
         title: const Text('Desactivar Usuario'),
         content: Text(
-          '¿Estás seguro de que quieres desactivar a ${user['username']}?',
+          '¿Estás seguro de que quieres desactivar a ${user['username'] ?? 'este usuario'}?',
         ),
         actions: [
           TextButton(
@@ -376,7 +392,7 @@ class _UsersManagementPageState extends State<UsersManagementPage> {
           ),
           ElevatedButton(
             onPressed: () {
-              context.read<UsersBloc>().add(DeactivateUser(user['id']));
+              context.read<UsersBloc>().add(DeactivateUser(user['uid']));
               Navigator.pop(context);
 
               ScaffoldMessenger.of(context).showSnackBar(
@@ -394,7 +410,7 @@ class _UsersManagementPageState extends State<UsersManagementPage> {
   }
 
   void _activateUser(Map<String, dynamic> user) {
-    final userData = {'id': user['id'], 'isActive': 1};
+    final userData = {'uid': user['uid'], 'isActive': true};
 
     context.read<UsersBloc>().add(UpdateUser(userData));
 
@@ -412,7 +428,7 @@ class _UsersManagementPageState extends State<UsersManagementPage> {
       builder: (context) => AlertDialog(
         title: const Text('Eliminar Usuario'),
         content: Text(
-          '¿Estás seguro de que quieres eliminar permanentemente a ${user['username']}? Esta acción no se puede deshacer.',
+          '¿Estás seguro de que quieres eliminar permanentemente a ${user['username'] ?? 'este usuario'}? Esta acción no se puede deshacer.',
         ),
         actions: [
           TextButton(
@@ -421,7 +437,7 @@ class _UsersManagementPageState extends State<UsersManagementPage> {
           ),
           ElevatedButton(
             onPressed: () {
-              context.read<UsersBloc>().add(DeleteUser(user['id']));
+              context.read<UsersBloc>().add(DeleteUser(user['uid']));
               Navigator.pop(context);
 
               ScaffoldMessenger.of(context).showSnackBar(
