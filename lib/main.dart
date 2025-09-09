@@ -8,7 +8,7 @@ import 'package:flutter_template/src/bloc/theme_state.dart';
 import 'package:flutter_template/src/bloc/users_bloc.dart';
 import 'package:flutter_template/src/bloc/scanner_bloc.dart';
 import 'package:flutter_template/src/data/database_helper.dart';
-import 'package:flutter_template/src/presentation/pages/splash_screen.dart';
+import 'package:flutter_template/src/presentation/pages/auth/splash_screen.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'dart:io';
 

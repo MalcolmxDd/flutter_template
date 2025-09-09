@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_template/src/bloc/auth_bloc.dart';
-import 'package:flutter_template/src/presentation/pages/login_page.dart';
+import 'package:flutter_template/src/presentation/pages/auth/login_page.dart';
 
 class RegisterPage extends StatelessWidget {
   final TextEditingController _usernameController = TextEditingController();

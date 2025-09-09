@@ -2,13 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_nav_bar/google_nav_bar.dart';
 import 'package:flutter_template/src/bloc/auth_bloc.dart';
-import 'package:flutter_template/src/presentation/pages/login_page.dart';
-import 'package:flutter_template/src/presentation/pages/dashboard_page.dart';
-import 'package:flutter_template/src/presentation/pages/profile_page.dart';
-import 'package:flutter_template/src/presentation/pages/settings_page.dart';
-import 'package:flutter_template/src/presentation/pages/users_management_page.dart';
-import 'package:flutter_template/src/presentation/pages/scanner_page.dart';
-import 'package:flutter_template/src/presentation/pages/codes_history_page.dart';
+import 'package:flutter_template/src/presentation/pages/auth/login_page.dart';
+import 'package:flutter_template/src/presentation/pages/main/dashboard_page.dart';
+import 'package:flutter_template/src/presentation/pages/user/profile_page.dart';
+import 'package:flutter_template/src/presentation/pages/settings/settings_page.dart';
+import 'package:flutter_template/src/presentation/pages/user/users_management_page.dart';
+import 'package:flutter_template/src/presentation/pages/scanner/scanner_page.dart';
+import 'package:flutter_template/src/presentation/pages/scanner/codes_history_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
