@@ -47,10 +47,10 @@ class _ScannerPageState extends State<ScannerPage> {
       if (code.isNotEmpty) {
         final now = DateTime.now();
         
-        // Verificar si es el mismo código escaneado recientemente (dentro de 3 segundos)
+        // Verificar si es el mismo código escaneado recientemente (dentro de 5 segundos)
         if (_lastScannedCode == code && 
             _lastScanTime != null && 
-            now.difference(_lastScanTime!).inSeconds < 3) {
+            now.difference(_lastScanTime!).inSeconds < 5) {
           return; // Ignorar escaneo duplicado
         }
 
@@ -60,21 +60,16 @@ class _ScannerPageState extends State<ScannerPage> {
           _lastScanTime = now;
         });
 
-        // Generar ID único del dispositivo
-        final String deviceId = Platform.isAndroid
-            ? 'android_${now.millisecondsSinceEpoch}'
-            : 'ios_${now.millisecondsSinceEpoch}';
-
         // Enviar evento para escanear el código
         context.read<ScannerBloc>().add(
-          ScanCode(code: code, type: type, deviceId: deviceId),
+          ScanCode(code: code, type: type),
         );
 
         // Mostrar confirmación
         _showScanConfirmation(code, type);
 
-        // Pausar escaneo por 3 segundos para evitar múltiples escaneos
-        Future.delayed(const Duration(seconds: 3), () {
+        // Pausar escaneo por 5 segundos para evitar múltiples escaneos
+        Future.delayed(const Duration(seconds: 5), () {
           if (mounted) {
             setState(() {
               _isScanning = true;
@@ -330,16 +325,12 @@ class _ScannerPageState extends State<ScannerPage> {
                           overflow: TextOverflow.ellipsis,
                         ),
                         subtitle: Text(
-                          '${code['type']} • ${_formatTimestamp(code['timestamp'])}',
+                          '${code['type']} • ${_formatTimestamp(code['scannedAt'])}',
                           style: const TextStyle(fontSize: 10),
                         ),
-                        trailing: Icon(
-                          code['isSynced'] == 1
-                              ? Icons.cloud_done
-                              : Icons.cloud_upload,
-                          color: code['isSynced'] == 1
-                              ? Colors.green
-                              : Colors.orange,
+                        trailing: const Icon(
+                          Icons.cloud_done,
+                          color: Colors.green,
                           size: 16,
                         ),
                       ),
@@ -366,9 +357,17 @@ class _ScannerPageState extends State<ScannerPage> {
     );
   }
 
-  String _formatTimestamp(String timestamp) {
+  String _formatTimestamp(dynamic timestamp) {
     try {
-      final dateTime = DateTime.parse(timestamp);
+      DateTime dateTime;
+      if (timestamp is int) {
+        dateTime = DateTime.fromMillisecondsSinceEpoch(timestamp);
+      } else if (timestamp is String) {
+        dateTime = DateTime.parse(timestamp);
+      } else {
+        return 'Desconocido';
+      }
+      
       final now = DateTime.now();
       final difference = now.difference(dateTime);
 

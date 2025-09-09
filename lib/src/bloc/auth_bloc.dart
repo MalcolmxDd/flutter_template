@@ -1,22 +1,29 @@
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
-import 'package:flutter_template/src/data/database_helper.dart';
+import 'package:flutter_template/src/services/firebase_auth_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 part 'auth_event.dart';
 part 'auth_state.dart';
 
 class AuthBloc extends Bloc<AuthEvent, AuthState> {
-  final DatabaseHelper _databaseHelper;
-
-  AuthBloc(this._databaseHelper) : super(AuthInitial()) {
+  AuthBloc() : super(AuthInitial()) {
     on<LoginButtonPressed>((event, emit) async {
       emit(AuthLoading());
       try {
-        final user = await _databaseHelper.getUser(event.username, event.password);
-        if (user != null) {
-          emit(AuthSuccess(username: event.username, roles: [user['role']]));
+        final userCredential = await FirebaseAuthService.signInWithEmailAndPassword(
+          email: event.email,
+          password: event.password,
+        );
+        
+        if (userCredential?.user != null) {
+          final userProfile = await FirebaseAuthService.getUserProfile(userCredential!.user!.uid);
+          final role = userProfile?['roles'] ?? 'user';
+          final username = userProfile?['username'] ?? userCredential.user!.displayName ?? 'Usuario';
+          
+          emit(AuthSuccess(username: username, role: role));
         } else {
-          emit(const AuthFailure(error: 'Credenciales inválidas'));
+          emit(const AuthFailure(error: 'Error de autenticación'));
         }
       } catch (e) {
         emit(AuthFailure(error: e.toString()));
@@ -26,33 +33,45 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<RegisterButtonPressed>((event, emit) async {
       emit(AuthLoading());
       try {
-        await _databaseHelper.saveUser({
-          'username': event.username,
-          'password': event.password,
-          'role': 'user', // Assign default role on registration
-        });
-        // After registering, we can consider the user logged in or redirect to login
-        emit(AuthSuccess(username: event.username, roles: ['user']));
-      } catch (e) {
-        // Check for unique constraint error
-        if (e.toString().contains('UNIQUE constraint failed')) {
-            emit(const AuthFailure(error: 'El nombre de usuario ya existe.'));
+        final userCredential = await FirebaseAuthService.createUserWithEmailAndPassword(
+          email: event.email,
+          password: event.password,
+          username: event.username,
+        );
+        
+        if (userCredential?.user != null) {
+          emit(AuthSuccess(username: event.username, role: 'user'));
         } else {
-            emit(AuthFailure(error: e.toString()));
+          emit(const AuthFailure(error: 'Error al crear la cuenta'));
         }
+      } catch (e) {
+        emit(AuthFailure(error: e.toString()));
       }
     });
 
-    on<LogoutButtonPressed>((event, emit) {
-      emit(AuthInitial());
+    on<LogoutButtonPressed>((event, emit) async {
+      try {
+        await FirebaseAuthService.signOut();
+        emit(AuthInitial());
+      } catch (e) {
+        emit(AuthFailure(error: 'Error al cerrar sesión: $e'));
+      }
     });
 
-    on<EnsureAdminExists>((event, emit) async {
+    on<CheckAuthStatus>((event, emit) async {
       try {
-        await _databaseHelper.createAdminUserIfNotExists();
-        emit(AdminEnsured());
+        final user = FirebaseAuthService.currentUser;
+        if (user != null) {
+          final userProfile = await FirebaseAuthService.getUserProfile(user.uid);
+          final role = userProfile?['roles'] ?? 'user';
+          final username = userProfile?['username'] ?? user.displayName ?? 'Usuario';
+          
+          emit(AuthSuccess(username: username, role: role));
+        } else {
+          emit(AuthInitial());
+        }
       } catch (e) {
-        emit(AuthFailure(error: 'Error al crear usuario admin: $e'));
+        emit(AuthInitial());
       }
     });
   }

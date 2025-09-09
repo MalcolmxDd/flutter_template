@@ -1,40 +1,45 @@
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
-import 'package:flutter_template/src/data/database_helper.dart';
+import 'package:flutter_template/src/services/firebase_database_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 part 'scanner_event.dart';
 part 'scanner_state.dart';
 
 class ScannerBloc extends Bloc<ScannerEvent, ScannerState> {
-  final DatabaseHelper _databaseHelper;
-
-  ScannerBloc(this._databaseHelper) : super(ScannerInitial()) {
+  ScannerBloc() : super(ScannerInitial()) {
     on<ScanCode>(_onScanCode);
     on<SaveScannedCode>(_onSaveScannedCode);
     on<LoadScannedCodes>(_onLoadScannedCodes);
     on<DeleteScannedCode>(_onDeleteScannedCode);
-    on<SyncWithServer>(_onSyncWithServer);
   }
 
   Future<void> _onScanCode(ScanCode event, Emitter<ScannerState> emit) async {
     emit(ScannerLoading());
     try {
-      // Guardar el código escaneado localmente
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        emit(const ScannerError(error: 'Usuario no autenticado'));
+        return;
+      }
+
+      // Guardar el código escaneado en Firebase
+      await FirebaseDatabaseService.saveScannedCode(
+        uid: user.uid,
+        code: event.code,
+        type: event.type,
+        content: event.content,
+      );
+
       final scannedCode = {
         'code': event.code,
         'type': event.type,
-        'timestamp': DateTime.now().toIso8601String(),
-        'deviceId': event.deviceId,
-        'isSynced': false,
+        'content': event.content,
+        'scannedAt': DateTime.now().millisecondsSinceEpoch,
+        'userId': user.uid,
       };
 
-      final id = await _databaseHelper.saveScannedCode(scannedCode);
-      scannedCode['id'] = id;
-
       emit(CodeScanned(scannedCode));
-
-      // Intentar sincronizar automáticamente
-      add(SyncWithServer());
     } catch (e) {
       emit(ScannerError(error: e.toString()));
     }
@@ -46,16 +51,26 @@ class ScannerBloc extends Bloc<ScannerEvent, ScannerState> {
   ) async {
     emit(ScannerLoading());
     try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        emit(const ScannerError(error: 'Usuario no autenticado'));
+        return;
+      }
+
+      await FirebaseDatabaseService.saveScannedCode(
+        uid: user.uid,
+        code: event.code,
+        type: event.type,
+        content: event.content,
+      );
+
       final scannedCode = {
         'code': event.code,
         'type': event.type,
-        'timestamp': DateTime.now().toIso8601String(),
-        'deviceId': event.deviceId,
-        'isSynced': false,
+        'content': event.content,
+        'scannedAt': DateTime.now().millisecondsSinceEpoch,
+        'userId': user.uid,
       };
-
-      final id = await _databaseHelper.saveScannedCode(scannedCode);
-      scannedCode['id'] = id;
 
       emit(CodeSaved(scannedCode));
     } catch (e) {
@@ -69,7 +84,25 @@ class ScannerBloc extends Bloc<ScannerEvent, ScannerState> {
   ) async {
     emit(ScannerLoading());
     try {
-      final codes = await _databaseHelper.getAllScannedCodes();
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        emit(const ScannerError(error: 'Usuario no autenticado'));
+        return;
+      }
+
+      // Verificar si el usuario es admin
+      final userProfile = await FirebaseDatabaseService.getUserProfile(user.uid);
+      final isAdmin = userProfile?['roles'] == 'admin';
+
+      List<Map<String, dynamic>> codes;
+      if (isAdmin) {
+        // Admin puede ver todos los códigos
+        codes = await FirebaseDatabaseService.getAllScannedCodes();
+      } else {
+        // Usuario normal solo ve sus códigos
+        codes = await FirebaseDatabaseService.getScannedCodesHistory(user.uid);
+      }
+
       emit(CodesLoaded(codes));
     } catch (e) {
       emit(ScannerError(error: e.toString()));
@@ -82,39 +115,29 @@ class ScannerBloc extends Bloc<ScannerEvent, ScannerState> {
   ) async {
     emit(ScannerLoading());
     try {
-      await _databaseHelper.deleteScannedCode(event.codeId);
+      await FirebaseDatabaseService.deleteScannedCode(event.codeId);
       emit(CodeDeleted(event.codeId));
 
       // Recargar la lista de códigos después de eliminar
-      final codes = await _databaseHelper.getAllScannedCodes();
-      emit(CodesLoaded(codes));
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        // Verificar si el usuario es admin
+        final userProfile = await FirebaseDatabaseService.getUserProfile(user.uid);
+        final isAdmin = userProfile?['roles'] == 'admin';
+
+        List<Map<String, dynamic>> codes;
+        if (isAdmin) {
+          // Admin puede ver todos los códigos
+          codes = await FirebaseDatabaseService.getAllScannedCodes();
+        } else {
+          // Usuario normal solo ve sus códigos
+          codes = await FirebaseDatabaseService.getScannedCodesHistory(user.uid);
+        }
+        emit(CodesLoaded(codes));
+      }
     } catch (e) {
       emit(ScannerError(error: e.toString()));
     }
   }
 
-  Future<void> _onSyncWithServer(
-    SyncWithServer event,
-    Emitter<ScannerState> emit,
-  ) async {
-    try {
-      // Obtener códigos no sincronizados
-      final unsyncedCodes = await _databaseHelper.getUnsyncedCodes();
-
-      if (unsyncedCodes.isEmpty) {
-        emit(SyncCompleted());
-        return;
-      }
-
-      // Aquí implementarías la lógica de sincronización con el servidor
-      // Por ahora, solo marcamos como sincronizados localmente
-      for (final code in unsyncedCodes) {
-        await _databaseHelper.markCodeAsSynced(code['id']);
-      }
-
-      emit(SyncCompleted());
-    } catch (e) {
-      emit(ScannerError(error: 'Error de sincronización: $e'));
-    }
-  }
 }

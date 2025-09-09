@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_template/src/bloc/scanner_bloc.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter_template/src/services/firebase_database_service.dart';
 
 class CodesHistoryPage extends StatefulWidget {
   const CodesHistoryPage({super.key});
@@ -13,11 +15,30 @@ class _CodesHistoryPageState extends State<CodesHistoryPage> {
   String _filterType = 'all';
   bool _showOnlyUnsynced = false;
   final TextEditingController _searchController = TextEditingController();
+  bool _isAdmin = false;
 
   @override
   void initState() {
     super.initState();
     context.read<ScannerBloc>().add(LoadScannedCodes());
+    _checkAdminStatus();
+  }
+
+  Future<void> _checkAdminStatus() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        final userProfile = await FirebaseDatabaseService.getUserProfile(user.uid);
+        setState(() {
+          _isAdmin = userProfile?['roles'] == 'admin';
+        });
+      }
+    } catch (e) {
+      // Si hay error, mantener como usuario normal
+      setState(() {
+        _isAdmin = false;
+      });
+    }
   }
 
   @override
@@ -30,9 +51,6 @@ class _CodesHistoryPageState extends State<CodesHistoryPage> {
     context.read<ScannerBloc>().add(LoadScannedCodes());
   }
 
-  void _syncWithServer() {
-    context.read<ScannerBloc>().add(SyncWithServer());
-  }
 
   List<Map<String, dynamic>> _filterCodes(List<Map<String, dynamic>> codes) {
     List<Map<String, dynamic>> filteredCodes = List.from(codes);
@@ -70,11 +88,6 @@ class _CodesHistoryPageState extends State<CodesHistoryPage> {
         title: const Text('Historial de Códigos'),
         backgroundColor: Theme.of(context).primaryColor,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.sync),
-            onPressed: _syncWithServer,
-            tooltip: 'Sincronizar con servidor',
-          ),
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: _refreshCodes,
@@ -337,7 +350,21 @@ class _CodesHistoryPageState extends State<CodesHistoryPage> {
 
   Widget _buildCodeCard(Map<String, dynamic> code) {
     final isSynced = code['isSynced'] == 1;
-    final timestamp = DateTime.parse(code['timestamp']);
+    final scannedAt = code['scannedAt'];
+    DateTime timestamp;
+    
+    if (scannedAt is int) {
+      // Firebase timestamp en milliseconds
+      timestamp = DateTime.fromMillisecondsSinceEpoch(scannedAt);
+    } else if (scannedAt is String) {
+      try {
+        timestamp = DateTime.parse(scannedAt);
+      } catch (e) {
+        timestamp = DateTime.now();
+      }
+    } else {
+      timestamp = DateTime.now();
+    }
     final now = DateTime.now();
     final difference = now.difference(timestamp);
 
@@ -350,47 +377,35 @@ class _CodesHistoryPageState extends State<CodesHistoryPage> {
           color: Theme.of(context).primaryColor,
         ),
         title: Text(
-          code['code'],
+          code['code']?.toString() ?? 'Código no disponible',
           style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
         ),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Tipo: ${code['type']}'),
-            Text('Dispositivo: ${code['deviceId']}'),
-            Row(
-              children: [
-                Icon(
-                  isSynced ? Icons.cloud_done : Icons.cloud_upload,
-                  color: isSynced ? Colors.green : Colors.orange,
-                  size: 16,
-                ),
-                const SizedBox(width: 4),
-                Text(
-                  isSynced ? 'Sincronizado' : 'Pendiente de sincronización',
-                  style: TextStyle(
-                    color: isSynced ? Colors.green : Colors.orange,
-                    fontSize: 12,
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-        trailing: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              _formatTimeDifference(difference),
-              style: const TextStyle(fontSize: 10, color: Colors.grey),
-            ),
-            const SizedBox(height: 4),
-            Icon(
-              isSynced ? Icons.check_circle : Icons.schedule,
-              color: isSynced ? Colors.green : Colors.orange,
-              size: 20,
-            ),
-          ],
+        subtitle: _isAdmin
+            ? Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Tipo: ${code['type']?.toString() ?? 'N/A'}'),
+                  if (code['username'] != null)
+                    Text(
+                      'Usuario: ${code['username']}',
+                      style: const TextStyle(fontSize: 12, color: Colors.grey),
+                    )
+                  else if (code['userInfo'] != null)
+                    Text(
+                      'Usuario: ${code['userInfo']['username'] ?? code['userInfo']['email'] ?? 'N/A'}',
+                      style: const TextStyle(fontSize: 12, color: Colors.grey),
+                    )
+                  else if (code['userId'] != null)
+                    Text(
+                      'Usuario ID: ${code['userId']}',
+                      style: const TextStyle(fontSize: 12, color: Colors.grey),
+                    ),
+                ],
+              )
+            : Text('Tipo: ${code['type']?.toString() ?? 'N/A'}'),
+        trailing: Text(
+          _formatTimeDifference(difference),
+          style: const TextStyle(fontSize: 12, color: Colors.grey),
         ),
         children: [
           Container(
@@ -409,7 +424,7 @@ class _CodesHistoryPageState extends State<CodesHistoryPage> {
                           borderRadius: BorderRadius.circular(4),
                         ),
                         child: SelectableText(
-                          code['code'],
+                          code['code']?.toString() ?? 'Código no disponible',
                           style: const TextStyle(fontFamily: 'monospace'),
                         ),
                       ),
@@ -422,24 +437,6 @@ class _CodesHistoryPageState extends State<CodesHistoryPage> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
-                    ElevatedButton.icon(
-                      onPressed: isSynced
-                          ? null
-                          : () {
-                              // Aquí podrías implementar re-sincronización manual
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Re-sincronizando código...'),
-                                ),
-                              );
-                            },
-                      icon: const Icon(Icons.sync),
-                      label: const Text('Re-sincronizar'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blue,
-                        foregroundColor: Colors.white,
-                      ),
-                    ),
                     ElevatedButton.icon(
                       onPressed: () {
                         _showDeleteConfirmation(code);

@@ -3,14 +3,14 @@ import 'package:flutter_template/src/presentation/widgets/profile_info_card.dart
 
 class ProfilePage extends StatelessWidget {
   final String username;
-  final List<String> userRoles;
+  final String userRole;
 
-  const ProfilePage({super.key, required this.username, required this.userRoles});
+  const ProfilePage({super.key, required this.username, required this.userRole});
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isAdmin = userRoles.contains('admin');
+    final isAdmin = userRole == 'admin';
 
     return Scaffold(
       body: SingleChildScrollView(

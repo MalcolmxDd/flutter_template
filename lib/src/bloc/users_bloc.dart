@@ -1,14 +1,12 @@
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
-import 'package:flutter_template/src/data/database_helper.dart';
+import 'package:flutter_template/src/services/firebase_database_service.dart';
 
 part 'users_event.dart';
 part 'users_state.dart';
 
 class UsersBloc extends Bloc<UsersEvent, UsersState> {
-  final DatabaseHelper _databaseHelper;
-
-  UsersBloc(this._databaseHelper) : super(UsersInitial()) {
+  UsersBloc() : super(UsersInitial()) {
     on<LoadUsers>(_onLoadUsers);
     on<AddUser>(_onAddUser);
     on<UpdateUser>(_onUpdateUser);
@@ -20,7 +18,7 @@ class UsersBloc extends Bloc<UsersEvent, UsersState> {
   Future<void> _onLoadUsers(LoadUsers event, Emitter<UsersState> emit) async {
     emit(UsersLoading());
     try {
-      final users = await _databaseHelper.getAllUsers();
+      final users = await FirebaseDatabaseService.getAllUsers();
       emit(UsersLoaded(users: users));
     } catch (e) {
       emit(UsersError(error: e.toString()));
@@ -29,7 +27,13 @@ class UsersBloc extends Bloc<UsersEvent, UsersState> {
 
   Future<void> _onAddUser(AddUser event, Emitter<UsersState> emit) async {
     try {
-      await _databaseHelper.saveUser(event.userData);
+      // Crear usuario con Firebase Auth
+      await FirebaseDatabaseService.createUserWithEmailAndPassword(
+        email: event.userData['email'],
+        password: event.userData['password'],
+        username: event.userData['username'],
+        role: event.userData['roles'] ?? 'user',
+      );
       add(LoadUsers());
     } catch (e) {
       emit(UsersError(error: e.toString()));
@@ -38,7 +42,31 @@ class UsersBloc extends Bloc<UsersEvent, UsersState> {
 
   Future<void> _onUpdateUser(UpdateUser event, Emitter<UsersState> emit) async {
     try {
-      await _databaseHelper.updateUser(event.userData);
+      final uid = event.userData['uid']?.toString() ?? '';
+      final username = event.userData['username']?.toString();
+      final email = event.userData['email']?.toString();
+      final role = event.userData['roles']?.toString() ?? 'user';
+      
+      if (uid.isEmpty) {
+        emit(const UsersError(error: 'UID de usuario requerido'));
+        return;
+      }
+      
+      await FirebaseDatabaseService.updateUserProfile(
+        uid: uid,
+        username: username,
+        email: email,
+        role: role,
+      );
+      
+      // Si hay cambio de estado activo/inactivo
+      if (event.userData.containsKey('isActive')) {
+        await FirebaseDatabaseService.updateUserActiveStatus(
+          uid,
+          event.userData['isActive'] as bool,
+        );
+      }
+      
       add(LoadUsers());
     } catch (e) {
       emit(UsersError(error: e.toString()));
@@ -47,7 +75,7 @@ class UsersBloc extends Bloc<UsersEvent, UsersState> {
 
   Future<void> _onDeleteUser(DeleteUser event, Emitter<UsersState> emit) async {
     try {
-      await _databaseHelper.deleteUser(event.userId);
+      await FirebaseDatabaseService.deleteUserProfile(event.userId);
       add(LoadUsers());
     } catch (e) {
       emit(UsersError(error: e.toString()));
@@ -59,7 +87,10 @@ class UsersBloc extends Bloc<UsersEvent, UsersState> {
     Emitter<UsersState> emit,
   ) async {
     try {
-      await _databaseHelper.deactivateUser(event.userId);
+      await FirebaseDatabaseService.updateUserProfile(
+        uid: event.userId,
+        role: 'inactive',
+      );
       add(LoadUsers());
     } catch (e) {
       emit(UsersError(error: e.toString()));
@@ -71,15 +102,13 @@ class UsersBloc extends Bloc<UsersEvent, UsersState> {
     Emitter<UsersState> emit,
   ) async {
     try {
-      final totalUsers = await _databaseHelper.getUsersCount();
-      final adminUsers = await _databaseHelper.getUsersCountByRole('admin');
-      final regularUsers = await _databaseHelper.getUsersCountByRole('user');
-
+      final stats = await FirebaseDatabaseService.getUserStats();
+      
       emit(
         UserStatsLoaded(
-          totalUsers: totalUsers,
-          adminUsers: adminUsers,
-          regularUsers: regularUsers,
+          totalUsers: stats['totalUsers'] ?? 0,
+          adminUsers: stats['adminUsers'] ?? 0,
+          regularUsers: stats['activeUsers'] ?? 0,
         ),
       );
     } catch (e) {

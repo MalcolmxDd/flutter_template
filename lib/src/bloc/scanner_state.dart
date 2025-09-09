@@ -39,7 +39,7 @@ class CodesLoaded extends ScannerState {
 }
 
 class CodeDeleted extends ScannerState {
-  final int deletedCodeId;
+  final String deletedCodeId;
 
   const CodeDeleted(this.deletedCodeId);
 

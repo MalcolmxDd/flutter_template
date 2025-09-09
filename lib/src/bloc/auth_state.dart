@@ -13,12 +13,14 @@ class AuthLoading extends AuthState {}
 
 class AuthSuccess extends AuthState {
   final String username;
-  final List<String> roles;
+  final String role;
 
-  const AuthSuccess({required this.username, this.roles = const []});
+  const AuthSuccess({required this.username, this.role = 'user'});
 
   @override
-  List<Object> get props => [username, roles];
+  List<Object> get props => [username, role];
+  
+  bool get isAdmin => role == 'admin';
 }
 
 class AuthFailure extends AuthState {

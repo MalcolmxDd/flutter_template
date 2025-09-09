@@ -1,0 +1,29 @@
+{
+  "rules": {
+    "users": {
+      ".read": "auth != null",
+      ".write": "auth != null",
+      "$uid": {
+        ".read": "auth != null",
+        ".write": "auth != null"
+      }
+    },
+    "scannedCodes": {
+      ".read": "auth != null",
+      ".write": "auth != null",
+      ".indexOn": ["userId", "scannedAt"],
+      "$codeId": {
+        ".read": "auth != null",
+        ".write": "auth != null"
+      }
+    },
+    "user_stats": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
+    "config": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    }
+  }
+}
