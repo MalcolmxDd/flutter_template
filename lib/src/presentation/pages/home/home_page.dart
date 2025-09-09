@@ -2,13 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_nav_bar/google_nav_bar.dart';
 import 'package:flutter_template/src/bloc/auth_bloc.dart';
-import 'package:flutter_template/src/presentation/pages/login_page.dart';
-import 'package:flutter_template/src/presentation/pages/dashboard_page.dart';
-import 'package:flutter_template/src/presentation/pages/profile_page.dart';
-import 'package:flutter_template/src/presentation/pages/settings_page.dart';
-import 'package:flutter_template/src/presentation/pages/users_management_page.dart';
-import 'package:flutter_template/src/presentation/pages/scanner_page.dart';
-import 'package:flutter_template/src/presentation/pages/codes_history_page.dart';
+import 'package:flutter_template/src/presentation/pages/auth/login_page.dart';
+import 'package:flutter_template/src/presentation/pages/dashboard/dashboard_page.dart';
+import 'package:flutter_template/src/presentation/pages/profile/profile_page.dart';
+import 'package:flutter_template/src/presentation/pages/settings/settings_page.dart';
+import 'package:flutter_template/src/presentation/pages/admin/users_management_page.dart';
+import 'package:flutter_template/src/presentation/pages/admin/persons_management_page.dart';
+import 'package:flutter_template/src/presentation/pages/scanner/scanner_page.dart';
+import 'package:flutter_template/src/presentation/pages/attendance/attendance_history_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -32,11 +33,11 @@ class _HomePageState extends State<HomePage> {
       'text': 'Escanear',
       'requiredPermission': null,
     },
-    {'icon': Icons.history, 'text': 'Historial', 'requiredPermission': null},
+    {'icon': Icons.history, 'text': 'Asistencias', 'requiredPermission': null},
     {
-      'icon': Icons.person_outline,
-      'text': 'Perfil',
-      'requiredPermission': null,
+      'icon': Icons.badge_outlined,
+      'text': 'Personas',
+      'requiredPermission': 'admin',
     },
     {
       'icon': Icons.people_outline,
@@ -82,6 +83,20 @@ class _HomePageState extends State<HomePage> {
           backgroundColor: theme.primaryColor,
           actions: [
             IconButton(
+              tooltip: 'Perfil',
+              icon: const Icon(Icons.person_outline),
+              onPressed: () {
+                final authState = context.read<AuthBloc>().state;
+                if (authState is AuthSuccess) {
+                  showProfileBottomSheet(
+                    context,
+                    username: authState.username,
+                    userRoles: authState.roles,
+                  );
+                }
+              },
+            ),
+            IconButton(
               icon: const Icon(Icons.logout),
               onPressed: () => _showLogoutConfirmationDialog(context),
             ),
@@ -99,13 +114,11 @@ class _HomePageState extends State<HomePage> {
                   onNavigateToPage: _onItemTapped, // Pasar el callback
                 ),
                 const ScannerPage(),
-                const CodesHistoryPage(),
-                ProfilePage(username: state.username, userRoles: userRoles),
+                AttendanceHistoryPage(userRoles: userRoles),
+                const PersonsManagementPage(),
                 const UsersManagementPage(),
                 SettingsPage(userRoles: userRoles),
               ];
-
-              // Removed unused availableNavigationItems variable
 
               final List<Widget> availablePages = [];
               for (int i = 0; i < _navigationItems.length; i++) {
@@ -117,7 +130,6 @@ class _HomePageState extends State<HomePage> {
                 }
               }
 
-              // Adjust selected index if the current one is no longer available
               if (_selectedIndex >= availablePages.length) {
                 _selectedIndex = 0;
               }
@@ -138,7 +150,6 @@ class _HomePageState extends State<HomePage> {
                 ),
               );
             }
-            // Show a loader while the state is not AuthSuccess (e.g., during logout transition)
             return const Center(child: CircularProgressIndicator());
           },
         ),

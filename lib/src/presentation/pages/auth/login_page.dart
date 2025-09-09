@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_template/src/bloc/auth_bloc.dart';
-import 'package:flutter_template/src/presentation/pages/home_page.dart';
-import 'package:flutter_template/src/presentation/pages/register_page.dart';
+import 'package:flutter_template/src/presentation/pages/home/home_page.dart';
+import 'package:flutter_template/src/presentation/pages/auth/register_page.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
 class LoginPage extends StatefulWidget {
@@ -12,7 +12,8 @@ class LoginPage extends StatefulWidget {
   _LoginPageState createState() => _LoginPageState();
 }
 
-class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMixin {
+class _LoginPageState extends State<LoginPage>
+    with SingleTickerProviderStateMixin {
   final TextEditingController _usernameController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   late AnimationController _animationController;
@@ -31,9 +32,10 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
       CurvedAnimation(parent: _animationController, curve: Curves.easeIn),
     );
 
-    _slideAnimation = Tween<Offset>(begin: const Offset(0, 0.5), end: Offset.zero).animate(
-      CurvedAnimation(parent: _animationController, curve: Curves.easeOut),
-    );
+    _slideAnimation =
+        Tween<Offset>(begin: const Offset(0, 0.5), end: Offset.zero).animate(
+          CurvedAnimation(parent: _animationController, curve: Curves.easeOut),
+        );
 
     _animationController.forward();
   }
@@ -59,10 +61,7 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
             );
           } else if (state is AuthFailure) {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.error),
-                backgroundColor: Colors.red,
-              ),
+              SnackBar(content: Text(state.error), backgroundColor: Colors.red),
             );
           }
         },
@@ -104,10 +103,7 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                       child: Text(
                         'Inicia sesión para continuar',
                         textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 16,
-                          color: Colors.grey[600],
-                        ),
+                        style: TextStyle(fontSize: 16, color: Colors.grey[600]),
                       ),
                     ),
                   ),
@@ -144,7 +140,9 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                       child: BlocBuilder<AuthBloc, AuthState>(
                         builder: (context, state) {
                           if (state is AuthLoading) {
-                            return const Center(child: CircularProgressIndicator());
+                            return const Center(
+                              child: CircularProgressIndicator(),
+                            );
                           }
                           return ElevatedButton(
                             style: ElevatedButton.styleFrom(
@@ -157,11 +155,11 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                               final username = _usernameController.text;
                               final password = _passwordController.text;
                               context.read<AuthBloc>().add(
-                                    LoginButtonPressed(
-                                      username: username,
-                                      password: password,
-                                    ),
-                                  );
+                                LoginButtonPressed(
+                                  username: username,
+                                  password: password,
+                                ),
+                              );
                             },
                             child: const Text(
                               'Iniciar Sesión',
@@ -186,10 +184,24 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                               Navigator.push(
                                 context,
                                 PageRouteBuilder(
-                                  pageBuilder: (context, animation, secondaryAnimation) => RegisterPage(),
-                                  transitionsBuilder: (context, animation, secondaryAnimation, child) {
-                                    return FadeTransition(opacity: animation, child: child);
-                                  },
+                                  pageBuilder:
+                                      (
+                                        context,
+                                        animation,
+                                        secondaryAnimation,
+                                      ) => RegisterPage(),
+                                  transitionsBuilder:
+                                      (
+                                        context,
+                                        animation,
+                                        secondaryAnimation,
+                                        child,
+                                      ) {
+                                        return FadeTransition(
+                                          opacity: animation,
+                                          child: child,
+                                        );
+                                      },
                                 ),
                               );
                             },
@@ -200,9 +212,15 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                     ),
                   ),
                   const SizedBox(height: 20),
-                  FadeTransition(opacity: _fadeAnimation, child: _buildDivider()),
+                  FadeTransition(
+                    opacity: _fadeAnimation,
+                    child: _buildDivider(),
+                  ),
                   const SizedBox(height: 20),
-                  FadeTransition(opacity: _fadeAnimation, child: _buildSocialLoginButtons(context)),
+                  FadeTransition(
+                    opacity: _fadeAnimation,
+                    child: _buildSocialLoginButtons(context),
+                  ),
                 ],
               ),
             ),
@@ -224,9 +242,7 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
       decoration: InputDecoration(
         labelText: labelText,
         prefixIcon: Icon(icon),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
         filled: true,
         fillColor: Colors.white,
       ),
@@ -274,14 +290,19 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
     );
   }
 
-  Widget _buildSocialButton(BuildContext context, {required IconData icon, required Color color, required VoidCallback onPressed}) {
+  Widget _buildSocialButton(
+    BuildContext context, {
+    required IconData icon,
+    required Color color,
+    required VoidCallback onPressed,
+  }) {
     return IconButton(
       icon: FaIcon(icon, color: color),
       onPressed: onPressed,
       iconSize: 35,
     );
   }
-  
+
   void _showNotImplementedSnackBar(BuildContext context) {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(

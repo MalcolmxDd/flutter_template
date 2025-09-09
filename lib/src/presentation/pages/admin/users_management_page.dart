@@ -255,10 +255,8 @@ class _UsersManagementPageState extends State<UsersManagementPage> {
                   'password': passwordController.text,
                   'role': selectedRole,
                 };
-
                 context.read<UsersBloc>().add(AddUser(userData));
                 Navigator.pop(context);
-
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
                     content: Text('Usuario agregado exitosamente'),
@@ -335,15 +333,11 @@ class _UsersManagementPageState extends State<UsersManagementPage> {
                   'username': usernameController.text,
                   'role': selectedRole,
                 };
-
-                // Solo incluir password si se ingresó uno nuevo
                 if (passwordController.text.isNotEmpty) {
                   userData['password'] = passwordController.text;
                 }
-
                 context.read<UsersBloc>().add(UpdateUser(userData));
                 Navigator.pop(context);
-
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
                     content: Text('Usuario actualizado exitosamente'),
@@ -378,7 +372,6 @@ class _UsersManagementPageState extends State<UsersManagementPage> {
             onPressed: () {
               context.read<UsersBloc>().add(DeactivateUser(user['id']));
               Navigator.pop(context);
-
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
                   content: Text('Usuario desactivado exitosamente'),
@@ -395,9 +388,7 @@ class _UsersManagementPageState extends State<UsersManagementPage> {
 
   void _activateUser(Map<String, dynamic> user) {
     final userData = {'id': user['id'], 'isActive': 1};
-
     context.read<UsersBloc>().add(UpdateUser(userData));
-
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Usuario activado exitosamente')),
     );
@@ -423,7 +414,6 @@ class _UsersManagementPageState extends State<UsersManagementPage> {
             onPressed: () {
               context.read<UsersBloc>().add(DeleteUser(user['id']));
               Navigator.pop(context);
-
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text('Usuario eliminado exitosamente')),
               );

@@ -57,3 +57,41 @@ class ScannerError extends ScannerState {
   @override
   List<Object> get props => [error];
 }
+
+// Nuevo: RUT detectado y persona encontrada en BD
+class RutDetected extends ScannerState {
+  final String rut;
+  final Map<String, dynamic> person;
+  final String sourceCode;
+  final String deviceId;
+
+  const RutDetected({
+    required this.rut,
+    required this.person,
+    required this.sourceCode,
+    required this.deviceId,
+  });
+
+  @override
+  List<Object> get props => [rut, person, sourceCode, deviceId];
+}
+
+// Nuevo: persona no encontrada
+class PersonNotFound extends ScannerState {
+  final String rut;
+
+  const PersonNotFound(this.rut);
+
+  @override
+  List<Object> get props => [rut];
+}
+
+// Nuevo: asistencia registrada
+class AttendanceRecorded extends ScannerState {
+  final Map<String, dynamic> attendance;
+
+  const AttendanceRecorded(this.attendance);
+
+  @override
+  List<Object> get props => [attendance];
+}

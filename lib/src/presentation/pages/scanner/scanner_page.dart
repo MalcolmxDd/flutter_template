@@ -46,10 +46,10 @@ class _ScannerPageState extends State<ScannerPage> {
 
       if (code.isNotEmpty) {
         final now = DateTime.now();
-        
+
         // Verificar si es el mismo código escaneado recientemente (dentro de 3 segundos)
-        if (_lastScannedCode == code && 
-            _lastScanTime != null && 
+        if (_lastScannedCode == code &&
+            _lastScanTime != null &&
             now.difference(_lastScanTime!).inSeconds < 3) {
           return; // Ignorar escaneo duplicado
         }
@@ -70,7 +70,7 @@ class _ScannerPageState extends State<ScannerPage> {
           ScanCode(code: code, type: type, deviceId: deviceId),
         );
 
-        // Mostrar confirmación
+        // Mostrar confirmación (incluye posible RUT)
         _showScanConfirmation(code, type);
 
         // Pausar escaneo por 3 segundos para evitar múltiples escaneos
@@ -92,6 +92,7 @@ class _ScannerPageState extends State<ScannerPage> {
   }
 
   void _showScanConfirmation(String code, String type) {
+    final String? rut = _extractRutFromString(code);
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -103,6 +104,13 @@ class _ScannerPageState extends State<ScannerPage> {
             Text('Tipo: $type'),
             const SizedBox(height: 8),
             Text('Código: $code'),
+            if (rut != null) ...[
+              const SizedBox(height: 8),
+              Text(
+                'RUT detectado: $rut',
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ],
             const SizedBox(height: 16),
             const Text(
               'El código ha sido guardado y se sincronizará automáticamente.',
@@ -118,6 +126,25 @@ class _ScannerPageState extends State<ScannerPage> {
         ],
       ),
     );
+  }
+
+  String? _extractRutFromString(String input) {
+    final RegExp rutFormat = RegExp(r'[0-9]{1,2}(?:\.[0-9]{3}){2}-[0-9Kk]');
+    final match1 = rutFormat.firstMatch(input);
+    if (match1 != null) return match1.group(0)!.toUpperCase();
+
+    final RegExp rutSimple = RegExp(r'\b([0-9]{7,9}-[0-9Kk])\b');
+    final match2 = rutSimple.firstMatch(input);
+    if (match2 != null) return match2.group(1)!.toUpperCase();
+
+    final RegExp rutParam = RegExp(
+      r'[?&]rut=([0-9]{7,9}-[0-9Kk])',
+      caseSensitive: false,
+    );
+    final match3 = rutParam.firstMatch(input);
+    if (match3 != null) return match3.group(1)!.toUpperCase();
+
+    return null;
   }
 
   void _toggleTorch() {
@@ -149,33 +176,103 @@ class _ScannerPageState extends State<ScannerPage> {
           ),
         ],
       ),
-      body: Column(
-        children: [
-          // Área del escáner
-          Expanded(
-            child: Stack(
-              children: [
-                MobileScanner(
-                  controller: _scannerController,
-                  onDetect: _onDetect,
-                ),
-                // Overlay con guías de escaneo
-                _buildScannerOverlay(),
-                // Controles del escáner
-                Positioned(
-                  bottom: 20,
-                  left: 0,
-                  right: 0,
-                  child: _buildScannerControls(),
-                ),
-              ],
+      body: BlocListener<ScannerBloc, ScannerState>(
+        listener: (context, state) {
+          if (state is RutDetected) {
+            _showPersonConfirmationDialog(
+              rut: state.rut,
+              person: state.person,
+              deviceId: state.deviceId,
+              sourceCode: state.sourceCode,
+            );
+          } else if (state is PersonNotFound) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('RUT ${state.rut} no está registrado'),
+                backgroundColor: Colors.orange,
+              ),
+            );
+          } else if (state is AttendanceRecorded) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Asistencia registrada'),
+                backgroundColor: Colors.green,
+              ),
+            );
+          }
+        },
+        child: Column(
+          children: [
+            // Área del escáner
+            Expanded(
+              child: Stack(
+                children: [
+                  MobileScanner(
+                    controller: _scannerController,
+                    onDetect: _onDetect,
+                  ),
+                  // Overlay con guías de escaneo
+                  _buildScannerOverlay(),
+                  // Controles del escáner
+                  Positioned(
+                    bottom: 20,
+                    left: 0,
+                    right: 0,
+                    child: _buildScannerControls(),
+                  ),
+                ],
+              ),
             ),
+            // Lista de códigos escaneados recientemente
+            Container(
+              height: 200,
+              padding: const EdgeInsets.all(16),
+              child: _buildRecentCodesList(),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showPersonConfirmationDialog({
+    required String rut,
+    required Map<String, dynamic> person,
+    required String deviceId,
+    required String sourceCode,
+  }) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Confirmar asistencia'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('RUT: $rut'),
+            const SizedBox(height: 8),
+            Text('Nombre: ${person['fullName'] ?? '—'}'),
+            const SizedBox(height: 4),
+            Text('Ocupación: ${person['occupation'] ?? '—'}'),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancelar'),
           ),
-          // Lista de códigos escaneados recientemente
-          Container(
-            height: 200,
-            padding: const EdgeInsets.all(16),
-            child: _buildRecentCodesList(),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              context.read<ScannerBloc>().add(
+                ConfirmAttendance(
+                  rut: rut,
+                  deviceId: deviceId,
+                  sourceCode: sourceCode,
+                ),
+              );
+            },
+            child: const Text('Confirmar'),
           ),
         ],
       ),

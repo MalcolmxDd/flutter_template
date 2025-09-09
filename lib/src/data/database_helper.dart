@@ -19,8 +19,7 @@ class DatabaseHelper {
     String path = join(await getDatabasesPath(), 'app_database.db');
     return await openDatabase(
       path,
-      version:
-          3, // Incrementar versión para la nueva tabla de códigos escaneados
+      version: 6, // Incrementar versión para incluir ocupación en persons
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
@@ -81,8 +80,35 @@ class DatabaseHelper {
       )
     ''');
 
+    // Tabla de personas autorizadas (para validar RUT)
+    await db.execute('''
+      CREATE TABLE persons(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        rut TEXT NOT NULL UNIQUE,
+        fullName TEXT,
+        occupation TEXT,
+        isActive INTEGER NOT NULL DEFAULT 1,
+        createdAt TEXT NOT NULL
+      )
+    ''');
+
+    // Tabla de asistencias
+    await db.execute('''
+      CREATE TABLE attendance(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        rut TEXT NOT NULL,
+        timestamp TEXT NOT NULL,
+        deviceId TEXT NOT NULL,
+        sourceCode TEXT,
+        isSynced INTEGER NOT NULL DEFAULT 0
+      )
+    ''');
+
     // Insertar usuario admin por defecto usando el método común
     await _ensureAdminUserExists(db);
+
+    // Sembrar personas de ejemplo
+    await _seedSamplePersons(db);
   }
 
   void _onUpgrade(Database db, int oldVersion, int newVersion) async {
@@ -128,6 +154,53 @@ class DatabaseHelper {
       }
     }
 
+    if (oldVersion < 4) {
+      // Crear tabla de asistencias si no existe
+      try {
+        await db.execute('''
+          CREATE TABLE IF NOT EXISTS attendance(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            rut TEXT NOT NULL,
+            timestamp TEXT NOT NULL,
+            deviceId TEXT NOT NULL,
+            sourceCode TEXT,
+            isSynced INTEGER NOT NULL DEFAULT 0
+          )
+        ''');
+      } catch (e) {
+        // La tabla ya existe, continuar
+      }
+    }
+
+    if (oldVersion < 5) {
+      // Crear tabla persons si no existe y sembrar datos de ejemplo
+      try {
+        await db.execute('''
+          CREATE TABLE IF NOT EXISTS persons(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            rut TEXT NOT NULL UNIQUE,
+            fullName TEXT,
+            occupation TEXT,
+            isActive INTEGER NOT NULL DEFAULT 1,
+            createdAt TEXT NOT NULL
+          )
+        ''');
+      } catch (e) {
+        // La tabla ya existe
+      }
+
+      await _seedSamplePersons(db);
+    }
+
+    if (oldVersion < 6) {
+      // Agregar columna occupation si falta
+      try {
+        await db.execute('ALTER TABLE persons ADD COLUMN occupation TEXT');
+      } catch (e) {
+        // La columna ya existe
+      }
+    }
+
     // Asegurar que el usuario admin exista después de cualquier migración
     await _ensureAdminUserExists(db);
   }
@@ -136,6 +209,54 @@ class DatabaseHelper {
   Future<void> createAdminUserIfNotExists() async {
     var dbClient = await database;
     await _ensureAdminUserExists(dbClient);
+  }
+
+  // Semilla de RUTs/personas de ejemplo para validación
+  Future<void> _seedSamplePersons(Database db) async {
+    final existing = await db.query('persons', limit: 1);
+    if (existing.isNotEmpty) return;
+
+    final now = DateTime.now().toIso8601String();
+    final samplePersons = [
+      {
+        'rut': '12.345.678-5',
+        'fullName': 'Juan Pérez',
+        'occupation': 'Guardia',
+        'isActive': 1,
+        'createdAt': now,
+      },
+      {
+        'rut': '9.876.543-2',
+        'fullName': 'María González',
+        'occupation': 'Jefa de Turno',
+        'isActive': 1,
+        'createdAt': now,
+      },
+      {
+        'rut': '7.654.321-K',
+        'fullName': 'Pedro López',
+        'occupation': 'Supervisor',
+        'isActive': 1,
+        'createdAt': now,
+      },
+      {
+        'rut': '12345678-5',
+        'fullName': 'Formato Simple',
+        'occupation': 'Operario',
+        'isActive': 1,
+        'createdAt': now,
+      },
+    ];
+
+    for (final p in samplePersons) {
+      try {
+        await db.insert(
+          'persons',
+          p,
+          conflictAlgorithm: ConflictAlgorithm.ignore,
+        );
+      } catch (_) {}
+    }
   }
 
   Future<int> saveUser(Map<String, dynamic> user) async {
@@ -361,5 +482,243 @@ class DatabaseHelper {
       'SELECT COUNT(*) as count FROM scanned_codes',
     );
     return result.first['count'] as int;
+  }
+
+  // Métodos para manejar asistencias
+  Future<int> saveAttendance(Map<String, dynamic> attendance) async {
+    var dbClient = await database;
+
+    // Evitar duplicados inmediatos del mismo RUT en 30 segundos
+    final now = DateTime.now();
+    final thirtySecondsAgo = now.subtract(const Duration(seconds: 30));
+    final existing = await dbClient.query(
+      'attendance',
+      where: 'rut = ? AND timestamp > ?',
+      whereArgs: [attendance['rut'], thirtySecondsAgo.toIso8601String()],
+      limit: 1,
+    );
+    if (existing.isNotEmpty) {
+      return existing.first['id'] as int;
+    }
+
+    return await dbClient.insert('attendance', attendance);
+  }
+
+  Future<List<Map<String, dynamic>>> getAllAttendance() async {
+    var dbClient = await database;
+    return await dbClient.query('attendance', orderBy: 'timestamp DESC');
+  }
+
+  Future<List<Map<String, dynamic>>> getUnsyncedAttendance() async {
+    var dbClient = await database;
+    return await dbClient.query(
+      'attendance',
+      where: 'isSynced = 0',
+      orderBy: 'timestamp ASC',
+    );
+  }
+
+  Future<int> markAttendanceAsSynced(int attendanceId) async {
+    var dbClient = await database;
+    return await dbClient.update(
+      'attendance',
+      {'isSynced': 1},
+      where: 'id = ?',
+      whereArgs: [attendanceId],
+    );
+  }
+
+  // Personas / RUTs
+  Future<Map<String, dynamic>?> getPersonByRut(String rut) async {
+    final dbClient = await database;
+    final result = await dbClient.query(
+      'persons',
+      where: 'rut = ? AND isActive = 1',
+      whereArgs: [rut],
+      limit: 1,
+    );
+    if (result.isEmpty) return null;
+    return result.first;
+  }
+
+  Future<bool> personExists(String rut) async {
+    final person = await getPersonByRut(rut);
+    return person != null;
+  }
+
+  Future<int> addOrUpdatePerson(Map<String, dynamic> person) async {
+    final dbClient = await database;
+    final nowIso = DateTime.now().toIso8601String();
+    final data = Map<String, dynamic>.from(person);
+    data['createdAt'] = data['createdAt'] ?? nowIso;
+    data['isActive'] = data['isActive'] ?? 1;
+
+    // Intentar actualizar por RUT; si no existe, insertar
+    final updated = await dbClient.update(
+      'persons',
+      data,
+      where: 'rut = ?',
+      whereArgs: [data['rut']],
+      conflictAlgorithm: ConflictAlgorithm.abort,
+    );
+    if (updated > 0) return updated;
+    return await dbClient.insert(
+      'persons',
+      data,
+      conflictAlgorithm: ConflictAlgorithm.ignore,
+    );
+  }
+
+  Future<List<Map<String, dynamic>>> getAllPersons({
+    bool? isActive,
+    String? searchQuery,
+    String orderBy = 'createdAt DESC',
+  }) async {
+    final dbClient = await database;
+    final whereClauses = <String>[];
+    final whereArgs = <Object?>[];
+
+    if (isActive != null) {
+      whereClauses.add('isActive = ?');
+      whereArgs.add(isActive ? 1 : 0);
+    }
+
+    if (searchQuery != null && searchQuery.trim().isNotEmpty) {
+      final q = '%${searchQuery.trim()}%';
+      whereClauses.add('(rut LIKE ? OR fullName LIKE ? OR occupation LIKE ?)');
+      whereArgs.addAll([q, q, q]);
+    }
+
+    final whereSql = whereClauses.isEmpty ? null : whereClauses.join(' AND ');
+    return await dbClient.query(
+      'persons',
+      where: whereSql,
+      whereArgs: whereArgs,
+      orderBy: orderBy,
+    );
+  }
+
+  Future<int> insertPerson({
+    required String rut,
+    required String fullName,
+    String? occupation,
+    bool isActive = true,
+  }) async {
+    final dbClient = await database;
+    return await dbClient.insert('persons', {
+      'rut': rut,
+      'fullName': fullName,
+      'occupation': occupation,
+      'isActive': isActive ? 1 : 0,
+      'createdAt': DateTime.now().toIso8601String(),
+    });
+  }
+
+  Future<int> updatePersonByRut({
+    required String rut,
+    String? fullName,
+    String? occupation,
+    bool? isActive,
+  }) async {
+    final dbClient = await database;
+    final data = <String, Object?>{};
+    if (fullName != null) data['fullName'] = fullName;
+    if (occupation != null) data['occupation'] = occupation;
+    if (isActive != null) data['isActive'] = isActive ? 1 : 0;
+    if (data.isEmpty) return 0;
+    return await dbClient.update(
+      'persons',
+      data,
+      where: 'rut = ?',
+      whereArgs: [rut],
+    );
+  }
+
+  Future<int> deletePersonByRut(String rut) async {
+    final dbClient = await database;
+    return await dbClient.delete('persons', where: 'rut = ?', whereArgs: [rut]);
+  }
+
+  Future<int> deactivatePersonByRut(String rut) async {
+    final dbClient = await database;
+    return await dbClient.update(
+      'persons',
+      {'isActive': 0},
+      where: 'rut = ?',
+      whereArgs: [rut],
+    );
+  }
+
+  // Consultas combinadas de asistencia + persona
+  Future<List<Map<String, dynamic>>> getAttendanceWithPerson({
+    DateTime? from,
+    DateTime? to,
+    String? rut,
+    bool onlyActivePersons = true,
+  }) async {
+    final dbClient = await database;
+    final whereClauses = <String>[];
+    final whereArgs = <Object?>[];
+
+    if (from != null) {
+      whereClauses.add('attendance.timestamp >= ?');
+      whereArgs.add(from.toIso8601String());
+    }
+    if (to != null) {
+      whereClauses.add('attendance.timestamp <= ?');
+      whereArgs.add(to.toIso8601String());
+    }
+    if (rut != null && rut.isNotEmpty) {
+      whereClauses.add('attendance.rut = ?');
+      whereArgs.add(rut);
+    }
+    if (onlyActivePersons) {
+      whereClauses.add('persons.isActive = 1');
+    }
+
+    final whereSql = whereClauses.isEmpty
+        ? ''
+        : 'WHERE ' + whereClauses.join(' AND ');
+
+    final result = await dbClient.rawQuery('''
+      SELECT attendance.id as attendanceId,
+             attendance.rut as rut,
+             attendance.timestamp as timestamp,
+             attendance.deviceId as deviceId,
+             attendance.sourceCode as sourceCode,
+             attendance.isSynced as isSynced,
+             persons.fullName as fullName,
+             persons.occupation as occupation
+      FROM attendance
+      LEFT JOIN persons ON persons.rut = attendance.rut
+      $whereSql
+      ORDER BY attendance.timestamp DESC
+    ''', whereArgs);
+
+    return result;
+  }
+
+  Future<int> getAttendanceCountForRut(
+    String rut, {
+    DateTime? from,
+    DateTime? to,
+  }) async {
+    final dbClient = await database;
+    final whereClauses = <String>['rut = ?'];
+    final whereArgs = <Object?>[rut];
+    if (from != null) {
+      whereClauses.add('timestamp >= ?');
+      whereArgs.add(from.toIso8601String());
+    }
+    if (to != null) {
+      whereClauses.add('timestamp <= ?');
+      whereArgs.add(to.toIso8601String());
+    }
+    final result = await dbClient.rawQuery(
+      'SELECT COUNT(*) as count FROM attendance WHERE ' +
+          whereClauses.join(' AND '),
+      whereArgs,
+    );
+    return (result.first['count'] as int?) ?? 0;
   }
 }

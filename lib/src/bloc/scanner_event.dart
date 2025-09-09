@@ -49,3 +49,19 @@ class DeleteScannedCode extends ScannerEvent {
 }
 
 class SyncWithServer extends ScannerEvent {}
+
+// Nuevo: confirmar registro de asistencia para un RUT detectado
+class ConfirmAttendance extends ScannerEvent {
+  final String rut;
+  final String deviceId;
+  final String sourceCode;
+
+  const ConfirmAttendance({
+    required this.rut,
+    required this.deviceId,
+    required this.sourceCode,
+  });
+
+  @override
+  List<Object> get props => [rut, deviceId, sourceCode];
+}
