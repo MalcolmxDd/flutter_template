@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:flutter_template/src/bloc/scanner_bloc.dart';
-import 'dart:io';
 
 class ScannerPage extends StatefulWidget {
   const ScannerPage({super.key});

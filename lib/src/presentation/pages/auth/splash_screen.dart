@@ -4,7 +4,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_template/src/bloc/auth_bloc.dart';
 import 'package:flutter_template/src/presentation/pages/auth/login_page.dart';
 import 'package:flutter_template/src/presentation/pages/main/home_page.dart';
-import 'package:flutter_template/src/services/migration_service.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -32,10 +31,7 @@ class _SplashScreenState extends State<SplashScreen>
     _animationController.forward();
 
     // Verificar estado de autenticación después de la animación
-    Timer(
-      const Duration(seconds: 2),
-      () => _checkAuthStatus(),
-    );
+    Timer(const Duration(seconds: 2), () => _checkAuthStatus());
   }
 
   void _checkAuthStatus() {
@@ -55,31 +51,8 @@ class _SplashScreenState extends State<SplashScreen>
       body: BlocListener<AuthBloc, AuthState>(
         listener: (context, state) async {
           if (state is AuthSuccess) {
-            // Verificar si hay datos para migrar
-            final hasDataToMigrate = await MigrationService.hasDataToMigrate();
-            if (hasDataToMigrate) {
-              try {
-                await MigrationService.performFullMigration();
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Datos migrados exitosamente a Firebase'),
-                      backgroundColor: Colors.green,
-                    ),
-                  );
-                }
-              } catch (e) {
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Error en migración: $e'),
-                      backgroundColor: Colors.orange,
-                    ),
-                  );
-                }
-              }
-            }
             
+
             if (mounted) {
               Navigator.of(context).pushReplacement(
                 MaterialPageRoute(builder: (context) => const HomePage()),
