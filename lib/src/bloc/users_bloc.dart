@@ -27,7 +27,6 @@ class UsersBloc extends Bloc<UsersEvent, UsersState> {
 
   Future<void> _onAddUser(AddUser event, Emitter<UsersState> emit) async {
     try {
-      // Crear usuario con Firebase Auth
       await FirebaseDatabaseService.createUserWithEmailAndPassword(
         email: event.userData['email'],
         password: event.userData['password'],
@@ -46,27 +45,26 @@ class UsersBloc extends Bloc<UsersEvent, UsersState> {
       final username = event.userData['username']?.toString();
       final email = event.userData['email']?.toString();
       final role = event.userData['roles']?.toString() ?? 'user';
-      
+
       if (uid.isEmpty) {
         emit(const UsersError(error: 'UID de usuario requerido'));
         return;
       }
-      
+
       await FirebaseDatabaseService.updateUserProfile(
         uid: uid,
         username: username,
         email: email,
         role: role,
       );
-      
-      // Si hay cambio de estado activo/inactivo
+
       if (event.userData.containsKey('isActive')) {
         await FirebaseDatabaseService.updateUserActiveStatus(
           uid,
           event.userData['isActive'] as bool,
         );
       }
-      
+
       add(LoadUsers());
     } catch (e) {
       emit(UsersError(error: e.toString()));
@@ -75,7 +73,7 @@ class UsersBloc extends Bloc<UsersEvent, UsersState> {
 
   Future<void> _onDeleteUser(DeleteUser event, Emitter<UsersState> emit) async {
     try {
-      await FirebaseDatabaseService.deleteUserProfile(event.userId);
+      await FirebaseDatabaseService.deactivateUser(event.userId);
       add(LoadUsers());
     } catch (e) {
       emit(UsersError(error: e.toString()));
@@ -87,10 +85,7 @@ class UsersBloc extends Bloc<UsersEvent, UsersState> {
     Emitter<UsersState> emit,
   ) async {
     try {
-      await FirebaseDatabaseService.updateUserProfile(
-        uid: event.userId,
-        role: 'inactive',
-      );
+      await FirebaseDatabaseService.updateUserActiveStatus(event.userId, false);
       add(LoadUsers());
     } catch (e) {
       emit(UsersError(error: e.toString()));
@@ -103,7 +98,7 @@ class UsersBloc extends Bloc<UsersEvent, UsersState> {
   ) async {
     try {
       final stats = await FirebaseDatabaseService.getUserStats();
-      
+
       emit(
         UserStatsLoaded(
           totalUsers: stats['totalUsers'] ?? 0,

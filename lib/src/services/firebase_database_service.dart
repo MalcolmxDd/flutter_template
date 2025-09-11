@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 /// Servicio para manejar operaciones con Firebase Realtime Database
 class FirebaseDatabaseService {
   static final DatabaseReference _database = FirebaseDatabase.instance.ref();
+  static final FirebaseAuth _auth = FirebaseAuth.instance;
 
   /// Crear perfil de usuario
   static Future<void> createUserProfile({
@@ -51,11 +52,11 @@ class FirebaseDatabaseService {
   }) async {
     try {
       // Crear usuario con Firebase Auth
-      final credential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
+      final credential = await _auth.createUserWithEmailAndPassword(
         email: email,
         password: password,
       );
-      
+
       if (credential.user != null) {
         // Crear perfil en la base de datos
         await createUserProfile(
@@ -115,13 +116,69 @@ class FirebaseDatabaseService {
     }
   }
 
-  /// Eliminar perfil de usuario
+  /// Eliminar perfil de usuario (marcar como eliminado)
   static Future<void> deleteUserProfile(String uid) async {
     try {
-      // Eliminar de Firebase Auth también
-      await _database.child('users').child(uid).remove();
+      await _database.child('users').child(uid).update({
+        'isDeleted': true,
+        'isActive': false,
+        'deletedAt': ServerValue.timestamp,
+      });
     } catch (e) {
-      throw 'Error al eliminar perfil de usuario: $e';
+      throw 'Error al marcar usuario como eliminado: $e';
+    }
+  }
+
+  /// Desactivar un usuario y marcarlo como eliminado
+  static Future<void> deactivateUser(String uid) async {
+    try {
+      // 1. Marcar como eliminado en la base de datos
+      await _markUserAsDeleted(uid);
+
+      // 2. Eliminar datos relacionados (ej. códigos escaneados)
+      await _deleteUserScannedCodes(uid);
+    } catch (e) {
+      throw 'Error al desactivar usuario: $e';
+    }
+  }
+
+  /// Función auxiliar para marcar un usuario como eliminado en la DB
+  static Future<void> _markUserAsDeleted(String uid) async {
+    try {
+      await _database.child('users').child(uid).update({
+        'isDeleted': true,
+        'isActive': false,
+        'deletedAt': ServerValue.timestamp,
+      });
+    } catch (e) {
+      throw 'Error al marcar usuario como eliminado: $e';
+    }
+  }
+
+  
+
+  /// Función auxiliar para eliminar códigos escaneados
+  static Future<void> _deleteUserScannedCodes(String uid) async {
+    try {
+      final codesSnapshot = await _database
+          .child('scannedCodes')
+          .orderByChild('userId')
+          .equalTo(uid)
+          .get();
+
+      if (codesSnapshot.exists) {
+        final Map<dynamic, dynamic> codes =
+            codesSnapshot.value as Map<dynamic, dynamic>;
+        final updates = <String, dynamic>{};
+
+        for (final entry in codes.entries) {
+          updates['scannedCodes/${entry.key}'] = null;
+        }
+
+        await _database.update(updates);
+      }
+    } catch (e) {
+      print('Error al eliminar códigos escaneados: $e');
     }
   }
 
@@ -134,6 +191,7 @@ class FirebaseDatabaseService {
             snapshot.value as Map<dynamic, dynamic>;
         return users.entries
             .map((entry) => Map<String, dynamic>.from(entry.value as Map))
+            .where((user) => user['isDeleted'] != true)
             .toList();
       }
       return [];
@@ -152,6 +210,7 @@ class FirebaseDatabaseService {
 
       int totalUsers = users.length;
       int activeUsers = users.where((user) => user['isActive'] == true).length;
+      int adminUsers = users.where((user) => user['roles'] == 'admin').length;
       int newUsersThisWeek = 0;
       int newUsersThisMonth = 0;
 
@@ -171,6 +230,7 @@ class FirebaseDatabaseService {
       return {
         'totalUsers': totalUsers,
         'activeUsers': activeUsers,
+        'adminUsers': adminUsers,
         'newUsersThisWeek': newUsersThisWeek,
         'newUsersThisMonth': newUsersThisMonth,
       };
@@ -187,7 +247,6 @@ class FirebaseDatabaseService {
     String? content,
   }) async {
     try {
-      // Obtener información del usuario para incluir el nombre
       final userProfile = await getUserProfile(uid);
       final username = userProfile?['username'] ?? 'Usuario desconocido';
       final email = userProfile?['email'] ?? '';
@@ -241,39 +300,30 @@ class FirebaseDatabaseService {
   /// Obtener todos los códigos escaneados (solo para administradores)
   static Future<List<Map<String, dynamic>>> getAllScannedCodes() async {
     try {
-      final snapshot = await _database
-          .child('scannedCodes')
-          .get();
+      final snapshot = await _database.child('scannedCodes').get();
 
       if (snapshot.exists) {
         final Map<dynamic, dynamic> codes =
             snapshot.value as Map<dynamic, dynamic>;
-        
+
         final codesList = <Map<String, dynamic>>[];
-        
+
         for (final entry in codes.entries) {
           final codeData = Map<String, dynamic>.from(entry.value as Map);
           final userId = codeData['userId'] as String?;
-          
-          // Obtener información del usuario que escaneó
+
           Map<String, dynamic>? userInfo;
           if (userId != null) {
             try {
               userInfo = await getUserProfile(userId);
             } catch (e) {
-              // Si no se puede obtener el perfil, continuar sin él
               userInfo = null;
             }
           }
-          
-          codesList.add({
-            'id': entry.key,
-            ...codeData,
-            'userInfo': userInfo,
-          });
+
+          codesList.add({'id': entry.key, ...codeData, 'userInfo': userInfo});
         }
 
-        // Ordenar por scannedAt (más recientes primero)
         codesList.sort((a, b) {
           final aTime = a['scannedAt'] ?? 0;
           final bTime = b['scannedAt'] ?? 0;
