@@ -43,3 +43,20 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Build directories
+/build/
+/android/build/
+/ios/build/
+/web/build/
+/linux/build/
+/macos/build/
+/windows/build/
+
+# APK files
+*.apk
+*.aab
+
+# Flutter build outputs
+build/
+**/build/
