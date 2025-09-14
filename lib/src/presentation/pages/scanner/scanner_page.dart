@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:flutter_template/src/bloc/scanner_bloc.dart';
+import 'package:flutter_template/src/presentation/widgets/web_qr_scanner_widget.dart';
+import 'package:flutter/foundation.dart';
 
 class ScannerPage extends StatefulWidget {
   const ScannerPage({super.key});
@@ -19,11 +21,15 @@ class _ScannerPageState extends State<ScannerPage> {
   @override
   void initState() {
     super.initState();
-    _scannerController = MobileScannerController(
-      detectionSpeed: DetectionSpeed.normal,
-      facing: CameraFacing.back,
-      torchEnabled: false,
-    );
+
+    // Solo inicializar el controlador de móvil si no estamos en web
+    if (!kIsWeb) {
+      _scannerController = MobileScannerController(
+        detectionSpeed: DetectionSpeed.normal,
+        facing: CameraFacing.back,
+        torchEnabled: false,
+      );
+    }
 
     // Cargar códigos existentes
     context.read<ScannerBloc>().add(LoadScannedCodes());
@@ -31,7 +37,9 @@ class _ScannerPageState extends State<ScannerPage> {
 
   @override
   void dispose() {
-    _scannerController?.dispose();
+    if (!kIsWeb) {
+      _scannerController?.dispose();
+    }
     super.dispose();
   }
 
@@ -45,10 +53,10 @@ class _ScannerPageState extends State<ScannerPage> {
 
       if (code.isNotEmpty) {
         final now = DateTime.now();
-        
+
         // Verificar si es el mismo código escaneado recientemente (dentro de 5 segundos)
-        if (_lastScannedCode == code && 
-            _lastScanTime != null && 
+        if (_lastScannedCode == code &&
+            _lastScanTime != null &&
             now.difference(_lastScanTime!).inSeconds < 5) {
           return; // Ignorar escaneo duplicado
         }
@@ -60,9 +68,7 @@ class _ScannerPageState extends State<ScannerPage> {
         });
 
         // Enviar evento para escanear el código
-        context.read<ScannerBloc>().add(
-          ScanCode(code: code, type: type),
-        );
+        context.read<ScannerBloc>().add(ScanCode(code: code, type: type));
 
         // Mostrar confirmación
         _showScanConfirmation(code, type);
@@ -115,11 +121,15 @@ class _ScannerPageState extends State<ScannerPage> {
   }
 
   void _toggleTorch() {
-    _scannerController?.toggleTorch();
+    if (!kIsWeb) {
+      _scannerController?.toggleTorch();
+    }
   }
 
   void _switchCamera() {
-    _scannerController?.switchCamera();
+    if (!kIsWeb) {
+      _scannerController?.switchCamera();
+    }
   }
 
   @override
@@ -128,43 +138,27 @@ class _ScannerPageState extends State<ScannerPage> {
       appBar: AppBar(
         title: const Text('Escanear Códigos'),
         backgroundColor: Theme.of(context).primaryColor,
-        actions: [
-          IconButton(
-            icon: Icon(
-              _scannerController?.torchEnabled == true
-                  ? Icons.flash_on
-                  : Icons.flash_off,
-            ),
-            onPressed: _toggleTorch,
-          ),
-          IconButton(
-            icon: const Icon(Icons.flip_camera_ios),
-            onPressed: _switchCamera,
-          ),
-        ],
+        actions: kIsWeb
+            ? null
+            : [
+                IconButton(
+                  icon: Icon(
+                    _scannerController?.torchEnabled == true
+                        ? Icons.flash_on
+                        : Icons.flash_off,
+                  ),
+                  onPressed: _toggleTorch,
+                ),
+                IconButton(
+                  icon: const Icon(Icons.flip_camera_ios),
+                  onPressed: _switchCamera,
+                ),
+              ],
       ),
       body: Column(
         children: [
           // Área del escáner
-          Expanded(
-            child: Stack(
-              children: [
-                MobileScanner(
-                  controller: _scannerController,
-                  onDetect: _onDetect,
-                ),
-                // Overlay con guías de escaneo
-                _buildScannerOverlay(),
-                // Controles del escáner
-                Positioned(
-                  bottom: 20,
-                  left: 0,
-                  right: 0,
-                  child: _buildScannerControls(),
-                ),
-              ],
-            ),
-          ),
+          Expanded(child: kIsWeb ? _buildWebScanner() : _buildMobileScanner()),
           // Lista de códigos escaneados recientemente
           Container(
             height: 200,
@@ -173,6 +167,51 @@ class _ScannerPageState extends State<ScannerPage> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildWebScanner() {
+    return WebQRScannerWidget(
+      onCodeScanned: (code, type) {
+        // Procesar el código escaneado desde web
+        final now = DateTime.now();
+
+        // Verificar si es el mismo código escaneado recientemente (dentro de 5 segundos)
+        if (_lastScannedCode == code &&
+            _lastScanTime != null &&
+            now.difference(_lastScanTime!).inSeconds < 5) {
+          return; // Ignorar escaneo duplicado
+        }
+
+        setState(() {
+          _lastScannedCode = code;
+          _lastScanTime = now;
+        });
+
+        // Enviar evento para escanear el código
+        context.read<ScannerBloc>().add(ScanCode(code: code, type: type));
+
+        // Mostrar confirmación
+        _showScanConfirmation(code, type);
+      },
+      isScanning: _isScanning,
+    );
+  }
+
+  Widget _buildMobileScanner() {
+    return Stack(
+      children: [
+        MobileScanner(controller: _scannerController, onDetect: _onDetect),
+        // Overlay con guías de escaneo
+        _buildScannerOverlay(),
+        // Controles del escáner
+        Positioned(
+          bottom: 20,
+          left: 0,
+          right: 0,
+          child: _buildScannerControls(),
+        ),
+      ],
     );
   }
 
@@ -366,7 +405,7 @@ class _ScannerPageState extends State<ScannerPage> {
       } else {
         return 'Desconocido';
       }
-      
+
       final now = DateTime.now();
       final difference = now.difference(dateTime);
 

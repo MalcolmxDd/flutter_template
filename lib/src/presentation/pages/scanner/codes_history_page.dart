@@ -142,7 +142,7 @@ class _CodesHistoryPageState extends State<CodesHistoryPage> {
                 return Column(
                   children: [
                     DropdownButtonFormField<String>(
-                      value: _filterType,
+                      initialValue: _filterType,
                       decoration: const InputDecoration(
                         labelText: 'Tipo de Código',
                         border: OutlineInputBorder(),
@@ -212,7 +212,7 @@ class _CodesHistoryPageState extends State<CodesHistoryPage> {
                   children: [
                     Expanded(
                       child: DropdownButtonFormField<String>(
-                        value: _filterType,
+                        initialValue: _filterType,
                         decoration: const InputDecoration(
                           labelText: 'Tipo de Código',
                           border: OutlineInputBorder(),

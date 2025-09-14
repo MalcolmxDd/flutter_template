@@ -227,7 +227,7 @@ class _UsersManagementPageState extends State<UsersManagementPage> {
                 ),
                 const SizedBox(height: 16),
                 DropdownButtonFormField<String>(
-                  value: selectedRole,
+                  initialValue: selectedRole,
                   decoration: const InputDecoration(labelText: 'Rol'),
                   items: const [
                     DropdownMenuItem(value: 'user', child: Text('Usuario')),
@@ -309,7 +309,7 @@ class _UsersManagementPageState extends State<UsersManagementPage> {
                 ),
                 const SizedBox(height: 16),
                 DropdownButtonFormField<String>(
-                  value: selectedRole,
+                  initialValue: selectedRole,
                   decoration: const InputDecoration(labelText: 'Rol'),
                   items: const [
                     DropdownMenuItem(value: 'user', child: Text('Usuario')),
