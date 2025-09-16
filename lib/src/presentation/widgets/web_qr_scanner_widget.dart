@@ -7,11 +7,15 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 class WebQRScannerWidget extends StatefulWidget {
   final Function(String code, String type) onCodeScanned;
   final bool isScanning;
+  final bool isFlashOn;
+  final VoidCallback? onFlashToggle;
 
   const WebQRScannerWidget({
     super.key,
     required this.onCodeScanned,
     this.isScanning = true,
+    this.isFlashOn = false,
+    this.onFlashToggle,
   });
 
   @override
@@ -68,6 +72,11 @@ class _WebQRScannerWidgetState extends State<WebQRScannerWidget> {
           _scannerController?.stop();
         }
       }
+    }
+
+    // Aplicar cambios en el estado del flash
+    if (widget.isFlashOn != oldWidget.isFlashOn) {
+      _applyFlashState();
     }
   }
 
@@ -587,6 +596,29 @@ class _WebQRScannerWidgetState extends State<WebQRScannerWidget> {
     _isScanning = false;
   }
 
+  /// Aplica el estado del flash a la cámara web
+  Future<void> _applyFlashState() async {
+    if (!kIsWeb || _videoElement == null) return;
+
+    try {
+      final stream = _videoElement!.srcObject;
+      if (stream == null) return;
+
+      final videoTrack = stream.getVideoTracks().first;
+
+      // Aplicar constraints para controlar el flash
+      await videoTrack.applyConstraints({
+        'torch': widget.isFlashOn,
+        'exposureMode': widget.isFlashOn ? 'single-shot' : 'continuous',
+        'exposureCompensation': widget.isFlashOn ? 1.0 : 0.0,
+      });
+
+      print('Flash ${widget.isFlashOn ? 'activado' : 'desactivado'}');
+    } catch (e) {
+      print('Error al aplicar estado del flash: $e');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     // Para móvil, usar mobile_scanner
@@ -774,13 +806,29 @@ class _WebQRScannerWidgetState extends State<WebQRScannerWidget> {
                 // Botón para forzar enfoque
                 Positioned(
                   bottom: 20,
-                  right: 20,
+                  right: 80,
                   child: FloatingActionButton(
                     mini: true,
                     onPressed: _attemptFocusAdjustment,
                     backgroundColor: Colors.blue.withOpacity(0.8),
                     child: const Icon(
                       Icons.center_focus_strong,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+                // Botón para alternar flash
+                Positioned(
+                  bottom: 20,
+                  right: 20,
+                  child: FloatingActionButton(
+                    mini: true,
+                    onPressed: widget.onFlashToggle,
+                    backgroundColor: widget.isFlashOn
+                        ? Colors.orange.withOpacity(0.8)
+                        : Colors.grey.withOpacity(0.8),
+                    child: Icon(
+                      widget.isFlashOn ? Icons.flash_on : Icons.flash_off,
                       color: Colors.white,
                     ),
                   ),

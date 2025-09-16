@@ -17,6 +17,7 @@ class _ScannerPageState extends State<ScannerPage> {
   bool _isScanning = true;
   String _lastScannedCode = '';
   DateTime? _lastScanTime;
+  bool _isWebFlashOn = false;
 
   @override
   void initState() {
@@ -211,6 +212,13 @@ class _ScannerPageState extends State<ScannerPage> {
     }
   }
 
+  // Función para alternar flash en web
+  void _toggleWebFlash() {
+    setState(() {
+      _isWebFlashOn = !_isWebFlashOn;
+    });
+  }
+
   void _switchCamera() {
     if (!kIsWeb) {
       _scannerController?.switchCamera();
@@ -223,22 +231,25 @@ class _ScannerPageState extends State<ScannerPage> {
       appBar: AppBar(
         title: const Text('Escanear Códigos'),
         backgroundColor: Theme.of(context).primaryColor,
-        actions: kIsWeb
-            ? null
-            : [
-                IconButton(
-                  icon: Icon(
-                    _scannerController?.torchEnabled == true
+        actions: [
+          IconButton(
+            icon: Icon(
+              kIsWeb
+                  ? (_isWebFlashOn ? Icons.flash_on : Icons.flash_off)
+                  : (_scannerController?.torchEnabled == true
                         ? Icons.flash_on
-                        : Icons.flash_off,
-                  ),
-                  onPressed: _toggleTorch,
-                ),
-                IconButton(
-                  icon: const Icon(Icons.flip_camera_ios),
-                  onPressed: _switchCamera,
-                ),
-              ],
+                        : Icons.flash_off),
+            ),
+            onPressed: kIsWeb ? _toggleWebFlash : _toggleTorch,
+            tooltip: 'Alternar flash',
+          ),
+          if (!kIsWeb)
+            IconButton(
+              icon: const Icon(Icons.flip_camera_ios),
+              onPressed: _switchCamera,
+              tooltip: 'Cambiar cámara',
+            ),
+        ],
       ),
       body: Column(
         children: [
@@ -280,6 +291,8 @@ class _ScannerPageState extends State<ScannerPage> {
         _showScanConfirmation(code, type);
       },
       isScanning: _isScanning,
+      isFlashOn: _isWebFlashOn,
+      onFlashToggle: _toggleWebFlash,
     );
   }
 
