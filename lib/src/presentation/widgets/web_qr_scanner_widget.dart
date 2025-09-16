@@ -205,6 +205,11 @@ class _WebQRScannerWidgetState extends State<WebQRScannerWidget> {
       _detectQRCode(imageData);
       _detectBarcode(imageData);
 
+      // Log de depuración reducido
+      if (DateTime.now().millisecondsSinceEpoch % 5000 < 100) {
+        print('Escaneando frame: ${imageData.width}x${imageData.height}');
+      }
+
       // Continuar escaneando
       html.window.requestAnimationFrame((_) => _scanFrame());
     } catch (e) {
@@ -241,26 +246,74 @@ class _WebQRScannerWidgetState extends State<WebQRScannerWidget> {
 
   void _detectBarcode(html.ImageData imageData) {
     try {
-      // Usar SimpleBarcode para detectar códigos de barras
-      if (js.context['SimpleBarcode'] != null) {
-        final result = js.context['SimpleBarcode'].callMethod('scan', [
-          _canvasElement,
-          imageData.data,
-          imageData.width,
-          imageData.height,
-        ]);
+      // Verificar si ZXing está disponible
+      if (js.context['ZXing'] == null) {
+        return;
+      }
 
-        if (result != null && result['code'] != null) {
-          final code = result['code'].toString();
-          final format = result['format']?.toString() ?? 'BARCODE';
+      // Crear un canvas temporal
+      final tempCanvas = html.CanvasElement();
+      final tempContext =
+          tempCanvas.getContext('2d') as html.CanvasRenderingContext2D;
+
+      tempCanvas.width = imageData.width;
+      tempCanvas.height = imageData.height;
+      tempContext.putImageData(imageData, 0, 0);
+
+      // Usar ZXing de manera más directa
+      final codeReader = js.context['ZXing']['MultiFormatReader'];
+      if (codeReader == null) {
+        return;
+      }
+
+      final reader = js.JsObject(codeReader);
+
+      // Crear hints para los formatos soportados
+      final hints = js.JsObject(js.context['Object']);
+      hints['possibleFormats'] = js.JsObject.jsify([
+        'CODE_128',
+        'CODE_39',
+        'EAN_13',
+        'EAN_8',
+        'UPC_A',
+        'UPC_E',
+        'CODABAR',
+        'ITF',
+      ]);
+      reader['hints'] = hints;
+
+      // Crear BinaryBitmap usando la forma correcta de llamar constructores
+      final luminanceSource = js.JsObject(
+        js.context['ZXing']['HTMLCanvasElementLuminanceSource'],
+        [tempCanvas],
+      );
+      final hybridBinarizer = js.JsObject(
+        js.context['ZXing']['HybridBinarizer'],
+        [luminanceSource],
+      );
+      final binaryBitmap = js.JsObject(js.context['ZXing']['BinaryBitmap'], [
+        hybridBinarizer,
+      ]);
+
+      // Intentar decodificar
+      try {
+        final result = reader.callMethod('decode', [binaryBitmap]);
+        if (result != null) {
+          final code = result['text'].toString();
+          final format = result['format'].toString();
+          print('✅ Código de barras detectado: $code de tipo: $format');
           if (code.isNotEmpty) {
             _processScannedCode(code, _getBarcodeTypeFromFormat(format));
           }
         }
+      } catch (decodeError) {
+        // Error de decodificación es normal, no hacer nada
       }
     } catch (e) {
-      // Silenciar errores de detección para no spamear la consola
-      // print('Error en detección de código de barras: $e');
+      // Solo mostrar errores críticos
+      if (DateTime.now().millisecondsSinceEpoch % 10000 < 100) {
+        print('Error en detección de código de barras: $e');
+      }
     }
   }
 
@@ -282,12 +335,6 @@ class _WebQRScannerWidgetState extends State<WebQRScannerWidget> {
         return 'CODABAR';
       case 'ITF':
         return 'ITF';
-      case 'PDF_417':
-        return 'PDF_417';
-      case 'AZTEC':
-        return 'AZTEC';
-      case 'DATA_MATRIX':
-        return 'DATA_MATRIX';
       default:
         return 'BARCODE';
     }
