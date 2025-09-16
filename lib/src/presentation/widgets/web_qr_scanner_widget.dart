@@ -201,9 +201,9 @@ class _WebQRScannerWidgetState extends State<WebQRScannerWidget> {
         _canvasElement!.height!,
       );
 
-      // Aquí implementarías la lógica de detección de QR
-      // Por simplicidad, vamos a usar una aproximación básica
+      // Detectar tanto códigos QR como códigos de barras
       _detectQRCode(imageData);
+      _detectBarcode(imageData);
 
       // Continuar escaneando
       html.window.requestAnimationFrame((_) => _scanFrame());
@@ -230,7 +230,7 @@ class _WebQRScannerWidgetState extends State<WebQRScannerWidget> {
       if (result != null) {
         final code = result['data'].toString();
         if (code.isNotEmpty) {
-          _processScannedCode(code);
+          _processScannedCode(code, 'QR_CODE');
         }
       }
     } catch (e) {
@@ -239,7 +239,116 @@ class _WebQRScannerWidgetState extends State<WebQRScannerWidget> {
     }
   }
 
-  void _processScannedCode(String code) {
+  void _detectBarcode(html.ImageData imageData) {
+    try {
+      // Usar ZXing-js para detectar códigos de barras
+      final codeReader = js.context['ZXing']['MultiFormatReader'];
+      final hints = js.JsObject(js.context['Object']);
+      hints['possibleFormats'] = js.JsObject.jsify([
+        'CODE_128',
+        'CODE_39',
+        'EAN_13',
+        'EAN_8',
+        'UPC_A',
+        'UPC_E',
+        'CODABAR',
+        'ITF',
+        'RSS_14',
+        'RSS_EXPANDED',
+        'PDF_417',
+        'AZTEC',
+        'DATA_MATRIX',
+        'MAXICODE',
+      ]);
+
+      final reader = js.JsObject(codeReader);
+      reader['hints'] = hints;
+
+      // Convertir ImageData a formato que ZXing pueda procesar
+      final binaryBitmap = _createBinaryBitmap(imageData);
+
+      if (binaryBitmap != null) {
+        final result = reader.callMethod('decode', [binaryBitmap]);
+
+        if (result != null) {
+          final code = result['text'].toString();
+          final format = result['format'].toString();
+          if (code.isNotEmpty) {
+            _processScannedCode(code, _getBarcodeTypeFromFormat(format));
+          }
+        }
+      }
+    } catch (e) {
+      // Silenciar errores de detección para no spamear la consola
+      // print('Error en detección de código de barras: $e');
+    }
+  }
+
+  js.JsObject? _createBinaryBitmap(html.ImageData imageData) {
+    try {
+      // Crear un BinaryBitmap usando ZXing-js
+      final luminanceSource = js
+          .context['ZXing']['HTMLCanvasElementLuminanceSource']
+          .callMethod('new', [
+            _canvasElement,
+            0,
+            0,
+            imageData.width,
+            imageData.height,
+          ]);
+
+      final hybridBinarizer = js.context['ZXing']['HybridBinarizer'].callMethod(
+        'new',
+        [luminanceSource],
+      );
+      final binaryBitmap = js.context['ZXing']['BinaryBitmap'].callMethod(
+        'new',
+        [hybridBinarizer],
+      );
+
+      return binaryBitmap;
+    } catch (e) {
+      // print('Error creando BinaryBitmap: $e');
+      return null;
+    }
+  }
+
+  String _getBarcodeTypeFromFormat(String format) {
+    switch (format.toUpperCase()) {
+      case 'CODE_128':
+        return 'CODE_128';
+      case 'CODE_39':
+        return 'CODE_39';
+      case 'EAN_13':
+        return 'EAN_13';
+      case 'EAN_8':
+        return 'EAN_8';
+      case 'UPC_A':
+        return 'UPC_A';
+      case 'UPC_E':
+        return 'UPC_E';
+      case 'CODABAR':
+        return 'CODABAR';
+      case 'ITF':
+        return 'ITF';
+      case 'RSS_14':
+        return 'RSS_14';
+      case 'RSS_EXPANDED':
+        return 'RSS_EXPANDED';
+      case 'PDF_417':
+        return 'PDF_417';
+      case 'AZTEC':
+        return 'AZTEC';
+      case 'DATA_MATRIX':
+        return 'DATA_MATRIX';
+      case 'MAXICODE':
+        return 'MAXICODE';
+      default:
+        return 'BARCODE';
+    }
+  }
+
+  void _processScannedCode(String code, String type) {
     final now = DateTime.now();
 
     // Verificar si es el mismo código escaneado recientemente (dentro de 5 segundos)
@@ -252,17 +361,18 @@ class _WebQRScannerWidgetState extends State<WebQRScannerWidget> {
     _lastScannedCode = code;
     _lastScanTime = now;
 
-    // Determinar el tipo de código
-    String type = 'QR_CODE';
-    if (code.startsWith('http')) {
-      type = 'URL';
-    } else if (code.contains('@')) {
-      type = 'EMAIL';
-    } else if (code.startsWith('tel:')) {
-      type = 'PHONE';
+    // Si es un QR_CODE, determinar el tipo de contenido
+    if (type == 'QR_CODE') {
+      if (code.startsWith('http')) {
+        type = 'URL';
+      } else if (code.contains('@')) {
+        type = 'EMAIL';
+      } else if (code.startsWith('tel:')) {
+        type = 'PHONE';
+      }
     }
 
-    print('QR Code detectado: $code de tipo: $type');
+    print('Código detectado: $code de tipo: $type');
     widget.onCodeScanned(code, type);
   }
 
@@ -273,10 +383,15 @@ class _WebQRScannerWidgetState extends State<WebQRScannerWidget> {
 
     for (final barcode in barcodes) {
       if (barcode.rawValue != null) {
-        _processScannedCode(barcode.rawValue!);
+        final type = _getBarcodeType(barcode.type);
+        _processScannedCode(barcode.rawValue!, type);
         break; // Solo procesar el primer código detectado
       }
     }
+  }
+
+  String _getBarcodeType(BarcodeType type) {
+    return type.name.toUpperCase();
   }
 
   void _stopWebCamera() {
@@ -434,7 +549,7 @@ class _WebQRScannerWidgetState extends State<WebQRScannerWidget> {
             ),
             child: const Center(
               child: Text(
-                'Cámara activa - Escanea un código QR',
+                'Cámara activa - Escanea códigos QR o códigos de barras',
                 style: TextStyle(color: Colors.white, fontSize: 16),
               ),
             ),

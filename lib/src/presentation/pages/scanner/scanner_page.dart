@@ -92,32 +92,117 @@ class _ScannerPageState extends State<ScannerPage> {
   }
 
   void _showScanConfirmation(String code, String type) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Código Escaneado'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Tipo: $type'),
-            const SizedBox(height: 8),
-            Text('Código: $code'),
-            const SizedBox(height: 16),
-            const Text(
-              'El código ha sido guardado y se sincronizará automáticamente.',
-              style: TextStyle(fontSize: 12, color: Colors.grey),
+    if (kIsWeb) {
+      // En web, mostrar un toast desde abajo
+      _showWebToast(code, type);
+    } else {
+      // En móvil, mostrar el modal tradicional
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Código Escaneado'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Tipo: $type'),
+              const SizedBox(height: 8),
+              Text('Código: $code'),
+              const SizedBox(height: 16),
+              const Text(
+                'El código ha sido guardado y se sincronizará automáticamente.',
+                style: TextStyle(fontSize: 12, color: Colors.grey),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('OK'),
             ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('OK'),
+      );
+    }
+  }
+
+  void _showWebToast(String code, String type) {
+    // Crear un overlay para el toast
+    final overlay = Overlay.of(context);
+    late OverlayEntry overlayEntry;
+
+    overlayEntry = OverlayEntry(
+      builder: (context) => Positioned(
+        bottom: 50,
+        left: 20,
+        right: 20,
+        child: Material(
+          color: Colors.transparent,
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.black87,
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.3),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(
+                      type == 'QR_CODE' ? Icons.qr_code : Icons.qr_code_2,
+                      color: Colors.green,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 8),
+                    const Text(
+                      'Código Escaneado',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Tipo: $type',
+                  style: const TextStyle(color: Colors.white70, fontSize: 14),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Código: $code',
+                  style: const TextStyle(color: Colors.white, fontSize: 14),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Guardado y sincronizado automáticamente',
+                  style: TextStyle(color: Colors.green, fontSize: 12),
+                ),
+              ],
+            ),
           ),
-        ],
+        ),
       ),
     );
+
+    overlay.insert(overlayEntry);
+
+    // Remover el toast después de 3 segundos
+    Future.delayed(const Duration(seconds: 3), () {
+      overlayEntry.remove();
+    });
   }
 
   void _toggleTorch() {
