@@ -241,38 +241,18 @@ class _WebQRScannerWidgetState extends State<WebQRScannerWidget> {
 
   void _detectBarcode(html.ImageData imageData) {
     try {
-      // Usar ZXing-js para detectar códigos de barras
-      final codeReader = js.context['ZXing']['MultiFormatReader'];
-      final hints = js.JsObject(js.context['Object']);
-      hints['possibleFormats'] = js.JsObject.jsify([
-        'CODE_128',
-        'CODE_39',
-        'EAN_13',
-        'EAN_8',
-        'UPC_A',
-        'UPC_E',
-        'CODABAR',
-        'ITF',
-        'RSS_14',
-        'RSS_EXPANDED',
-        'PDF_417',
-        'AZTEC',
-        'DATA_MATRIX',
-        'MAXICODE',
-      ]);
+      // Usar SimpleBarcode para detectar códigos de barras
+      if (js.context['SimpleBarcode'] != null) {
+        final result = js.context['SimpleBarcode'].callMethod('scan', [
+          _canvasElement,
+          imageData.data,
+          imageData.width,
+          imageData.height,
+        ]);
 
-      final reader = js.JsObject(codeReader);
-      reader['hints'] = hints;
-
-      // Convertir ImageData a formato que ZXing pueda procesar
-      final binaryBitmap = _createBinaryBitmap(imageData);
-
-      if (binaryBitmap != null) {
-        final result = reader.callMethod('decode', [binaryBitmap]);
-
-        if (result != null) {
-          final code = result['text'].toString();
-          final format = result['format'].toString();
+        if (result != null && result['code'] != null) {
+          final code = result['code'].toString();
+          final format = result['format']?.toString() ?? 'BARCODE';
           if (code.isNotEmpty) {
             _processScannedCode(code, _getBarcodeTypeFromFormat(format));
           }
@@ -281,35 +261,6 @@ class _WebQRScannerWidgetState extends State<WebQRScannerWidget> {
     } catch (e) {
       // Silenciar errores de detección para no spamear la consola
       // print('Error en detección de código de barras: $e');
-    }
-  }
-
-  js.JsObject? _createBinaryBitmap(html.ImageData imageData) {
-    try {
-      // Crear un BinaryBitmap usando ZXing-js
-      final luminanceSource = js
-          .context['ZXing']['HTMLCanvasElementLuminanceSource']
-          .callMethod('new', [
-            _canvasElement,
-            0,
-            0,
-            imageData.width,
-            imageData.height,
-          ]);
-
-      final hybridBinarizer = js.context['ZXing']['HybridBinarizer'].callMethod(
-        'new',
-        [luminanceSource],
-      );
-      final binaryBitmap = js.context['ZXing']['BinaryBitmap'].callMethod(
-        'new',
-        [hybridBinarizer],
-      );
-
-      return binaryBitmap;
-    } catch (e) {
-      // print('Error creando BinaryBitmap: $e');
-      return null;
     }
   }
 
@@ -331,18 +282,12 @@ class _WebQRScannerWidgetState extends State<WebQRScannerWidget> {
         return 'CODABAR';
       case 'ITF':
         return 'ITF';
-      case 'RSS_14':
-        return 'RSS_14';
-      case 'RSS_EXPANDED':
-        return 'RSS_EXPANDED';
       case 'PDF_417':
         return 'PDF_417';
       case 'AZTEC':
         return 'AZTEC';
       case 'DATA_MATRIX':
         return 'DATA_MATRIX';
-      case 'MAXICODE':
-        return 'MAXICODE';
       default:
         return 'BARCODE';
     }
