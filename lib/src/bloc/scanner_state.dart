@@ -13,11 +13,21 @@ class ScannerLoading extends ScannerState {}
 
 class CodeScanned extends ScannerState {
   final Map<String, dynamic> scannedCode;
+  final Map<String, dynamic>? existingCode;
 
-  const CodeScanned(this.scannedCode);
+  const CodeScanned(this.scannedCode, {this.existingCode});
 
   @override
-  List<Object> get props => [scannedCode];
+  List<Object> get props => [scannedCode, existingCode ?? {}];
+}
+
+class CodeAlreadyExists extends ScannerState {
+  final Map<String, dynamic> existingCode;
+
+  const CodeAlreadyExists(this.existingCode);
+
+  @override
+  List<Object> get props => [existingCode];
 }
 
 class CodeSaved extends ScannerState {

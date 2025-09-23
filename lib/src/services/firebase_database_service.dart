@@ -245,6 +245,8 @@ class FirebaseDatabaseService {
     required String code,
     required String type,
     String? content,
+    String? productName,
+    double? productPrice,
   }) async {
     try {
       final userProfile = await getUserProfile(uid);
@@ -255,6 +257,8 @@ class FirebaseDatabaseService {
         'code': code,
         'type': type,
         'content': content ?? '',
+        'productName': productName ?? '',
+        'productPrice': productPrice ?? 0.0,
         'userId': uid,
         'username': username,
         'userEmail': email,
@@ -344,6 +348,33 @@ class FirebaseDatabaseService {
       await _database.child('scannedCodes').child(codeId).remove();
     } catch (e) {
       throw 'Error al eliminar código: $e';
+    }
+  }
+
+  /// Buscar código existente por su valor
+  static Future<Map<String, dynamic>?> findExistingCode(String code) async {
+    try {
+      final snapshot = await _database
+          .child('scannedCodes')
+          .orderByChild('code')
+          .equalTo(code)
+          .limitToFirst(1)
+          .get();
+
+      if (snapshot.exists && snapshot.value != null) {
+        final Map<dynamic, dynamic> codes = snapshot.value as Map<dynamic, dynamic>;
+
+        // Obtener el primer (y único) resultado
+        final entry = codes.entries.first;
+        final codeData = Map<String, dynamic>.from(entry.value as Map);
+        codeData['id'] = entry.key;
+
+        return codeData;
+      }
+
+      return null;
+    } catch (e) {
+      throw 'Error al buscar código existente: $e';
     }
   }
 

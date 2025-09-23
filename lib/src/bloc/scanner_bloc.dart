@@ -23,23 +23,35 @@ class ScannerBloc extends Bloc<ScannerEvent, ScannerState> {
         return;
       }
 
-      // Guardar el código escaneado en Firebase
-      await FirebaseDatabaseService.saveScannedCode(
-        uid: user.uid,
-        code: event.code,
-        type: event.type,
-        content: event.content,
-      );
+      // Si se debe verificar código existente
+      Map<String, dynamic>? existingCode;
+      if (event.checkExisting) {
+        try {
+          existingCode = await FirebaseDatabaseService.findExistingCode(event.code);
+        } catch (e) {
+          // Si hay error al buscar, continuar sin datos existentes
+          existingCode = null;
+        }
+      }
 
+      // Si existe un código previo, emitir estado especial
+      if (existingCode != null) {
+        emit(CodeAlreadyExists(existingCode));
+        return;
+      }
+
+      // Crear el código escaneado actual
       final scannedCode = {
         'code': event.code,
         'type': event.type,
-        'content': event.content,
+        'content': event.content ?? '',
+        'productName': event.productName,
+        'productPrice': event.productPrice,
         'scannedAt': DateTime.now().millisecondsSinceEpoch,
         'userId': user.uid,
       };
 
-      emit(CodeScanned(scannedCode));
+      emit(CodeScanned(scannedCode, existingCode: existingCode));
     } catch (e) {
       emit(ScannerError(error: e.toString()));
     }
@@ -62,12 +74,16 @@ class ScannerBloc extends Bloc<ScannerEvent, ScannerState> {
         code: event.code,
         type: event.type,
         content: event.content,
+        productName: event.productName,
+        productPrice: event.productPrice,
       );
 
       final scannedCode = {
         'code': event.code,
         'type': event.type,
-        'content': event.content,
+        'content': event.content ?? '',
+        'productName': event.productName,
+        'productPrice': event.productPrice,
         'scannedAt': DateTime.now().millisecondsSinceEpoch,
         'userId': user.uid,
       };

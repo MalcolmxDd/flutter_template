@@ -74,7 +74,8 @@ class _CodesHistoryPageState extends State<CodesHistoryPage> {
       filteredCodes = filteredCodes.where((code) {
         final searchTerm = _searchController.text.toLowerCase();
         return code['code'].toString().toLowerCase().contains(searchTerm) ||
-            code['type'].toString().toLowerCase().contains(searchTerm);
+            code['type'].toString().toLowerCase().contains(searchTerm) ||
+            (code['productName']?.toString().toLowerCase().contains(searchTerm) ?? false);
       }).toList();
     }
 
@@ -349,7 +350,7 @@ class _CodesHistoryPageState extends State<CodesHistoryPage> {
   }
 
   Widget _buildCodeCard(Map<String, dynamic> code) {
-    final isSynced = code['isSynced'] == 1;
+    final isSynced = (code['isSynced'] as int? ?? 0) == 1;
     final scannedAt = code['scannedAt'];
     DateTime timestamp;
     
@@ -377,14 +378,29 @@ class _CodesHistoryPageState extends State<CodesHistoryPage> {
           color: Theme.of(context).primaryColor,
         ),
         title: Text(
-          code['code']?.toString() ?? 'Código no disponible',
+          // Mostrar nombre del producto si existe, sino mostrar el código
+          (code['productName'] != null && code['productName'].toString().isNotEmpty)
+              ? code['productName'].toString()
+              : (code['code']?.toString() ?? 'Código no disponible'),
           style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
         ),
         subtitle: _isAdmin
             ? Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Tipo: ${code['type']?.toString() ?? 'N/A'}'),
+                  // Mostrar precio si existe
+                  if (code['productPrice'] != null && code['productPrice'] != 0.0)
+                    Text(
+                      '\$${code['productPrice'].toStringAsFixed(2)}',
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.green,
+                      ),
+                    )
+                  else
+                    Text('Tipo: ${code['type']?.toString() ?? 'N/A'}'),
+                  // Mostrar usuario
                   if (code['username'] != null)
                     Text(
                       'Usuario: ${code['username']}',
@@ -402,7 +418,25 @@ class _CodesHistoryPageState extends State<CodesHistoryPage> {
                     ),
                 ],
               )
-            : Text('Tipo: ${code['type']?.toString() ?? 'N/A'}'),
+            : Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Mostrar precio si existe
+                  if (code['productPrice'] != null && code['productPrice'] != 0.0)
+                    Text(
+                      '\$${code['productPrice'].toStringAsFixed(2)}',
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.green,
+                      ),
+                    )
+                  else
+                    Text('Tipo: ${code['type']?.toString() ?? 'N/A'}'),
+                  // Mostrar usuario
+                  Text('Usuario: ${code['username'] ?? 'N/A'}'),
+                ],
+              ),
         trailing: Text(
           _formatTimeDifference(difference),
           style: const TextStyle(fontSize: 12, color: Colors.grey),
@@ -413,9 +447,63 @@ class _CodesHistoryPageState extends State<CodesHistoryPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // Mostrar información del producto si existe (PRIMERO)
+                if (code['productName'] != null && code['productName'].toString().isNotEmpty) ...[
+                  Row(
+                    children: [
+                      const Text('Producto: '),
+                      Expanded(
+                        child: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            code['productName'].toString(),
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                ],
+                if (code['productPrice'] != null && code['productPrice'] != 0.0) ...[
+                  Row(
+                    children: [
+                      const Text('Precio: '),
+                      Expanded(
+                        child: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.green[50],
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            '\$${code['productPrice'].toStringAsFixed(2)}',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.green,
+                              fontSize: 16,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                ],
+                // Separador visual
+                if ((code['productName'] != null && code['productName'].toString().isNotEmpty) ||
+                    (code['productPrice'] != null && code['productPrice'] != 0.0)) ...[
+                  Divider(color: Colors.grey[300], thickness: 1),
+                  const SizedBox(height: 16),
+                ],
+                // Información del código (DESPUÉS)
                 Row(
                   children: [
-                    const Text('Código completo: '),
+                    const Text('Código: '),
                     Expanded(
                       child: Container(
                         padding: const EdgeInsets.all(8),
@@ -432,8 +520,11 @@ class _CodesHistoryPageState extends State<CodesHistoryPage> {
                   ],
                 ),
                 const SizedBox(height: 8),
-                Text('Escaneado: ${_formatTimestamp(timestamp)}'),
+                Text('Tipo: ${code['type']?.toString() ?? 'N/A'}'),
                 const SizedBox(height: 8),
+                Text('Escaneado: ${_formatTimestamp(timestamp)}'),
+                const SizedBox(height: 16),
+                // Botón eliminar (AL FINAL)
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
