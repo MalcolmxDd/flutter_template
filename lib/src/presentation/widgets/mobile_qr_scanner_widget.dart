@@ -9,7 +9,7 @@ mixin CameraControlMixin {
   void resumeCamera();
 }
 
-class WebQRScannerWidget extends StatefulWidget {
+class MobileQRScannerWidget extends StatefulWidget {
   final Function(String code, String type) onCodeScanned;
   final bool isScanning;
   final bool isFlashOn;
@@ -19,7 +19,7 @@ class WebQRScannerWidget extends StatefulWidget {
   final VoidCallback? onCameraPause;
   final VoidCallback? onCameraResume;
 
-  const WebQRScannerWidget({
+  const MobileQRScannerWidget({
     super.key,
     required this.onCodeScanned,
     this.isScanning = true,
@@ -32,26 +32,26 @@ class WebQRScannerWidget extends StatefulWidget {
   });
 
   @override
-  State<WebQRScannerWidget> createState() => _WebQRScannerWidgetState();
+  State<MobileQRScannerWidget> createState() => _MobileQRScannerWidgetState();
 
   // Métodos públicos para controlar la cámara
   static void pauseCamera() {
-    _WebQRScannerWidgetState._pauseCameraStatic();
+    _MobileQRScannerWidgetState._pauseCameraStatic();
   }
 
   static void resumeCamera() {
-    _WebQRScannerWidgetState._resumeCameraStatic();
+    _MobileQRScannerWidgetState._resumeCameraStatic();
   }
 }
 
-class _WebQRScannerWidgetState extends State<WebQRScannerWidget> {
+class _MobileQRScannerWidgetState extends State<MobileQRScannerWidget> {
   MobileScannerController? _scannerController;
   bool _isInitialized = false;
   bool _hasError = false;
   String? _errorMessage;
   String? _lastScannedCode;
   DateTime? _lastScanTime;
-  static _WebQRScannerWidgetState? _currentInstance;
+  static _MobileQRScannerWidgetState? _currentInstance;
 
   @override
   void initState() {
@@ -68,7 +68,7 @@ class _WebQRScannerWidgetState extends State<WebQRScannerWidget> {
   }
 
   @override
-  void didUpdateWidget(WebQRScannerWidget oldWidget) {
+  void didUpdateWidget(MobileQRScannerWidget oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.isScanning != oldWidget.isScanning) {
       if (widget.isScanning) {
@@ -348,7 +348,7 @@ class _WebQRScannerWidgetState extends State<WebQRScannerWidget> {
     }
   }
 
-  static _WebQRScannerWidgetState? _getCurrentInstance() {
+  static _MobileQRScannerWidgetState? _getCurrentInstance() {
     return _currentInstance;
   }
 }
