@@ -5,7 +5,9 @@ import 'package:flutter_template/src/bloc/theme_bloc.dart';
 import 'package:flutter_template/src/bloc/theme_event.dart';
 import 'package:flutter_template/src/bloc/theme_state.dart';
 import 'package:flutter_template/src/bloc/users_bloc.dart';
+import 'package:flutter_template/src/bloc/inventory_bloc.dart';
 import 'package:flutter_template/src/bloc/scanner_bloc.dart';
+import 'package:flutter_template/src/bloc/sales_bloc.dart';
 import 'package:flutter_template/src/presentation/pages/auth/splash_screen.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_template/firebase_options.dart';
@@ -32,7 +34,9 @@ class MyApp extends StatelessWidget {
         BlocProvider(create: (context) => AuthBloc()),
         BlocProvider(create: (context) => ThemeBloc()..add(ThemeLoaded())),
         BlocProvider(create: (context) => UsersBloc()),
-        BlocProvider(create: (context) => ScannerBloc()),
+        BlocProvider(create: (context) => InventoryBloc()),
+        BlocProvider(create: (context) => SalesBloc()),
+        BlocProvider(create: (context) => ScannerBloc(salesBloc: context.read<SalesBloc>())),
       ],
       child: BlocBuilder<ThemeBloc, ThemeState>(
         builder: (context, state) {

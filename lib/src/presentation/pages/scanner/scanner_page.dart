@@ -3,6 +3,10 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:flutter_template/src/bloc/scanner_bloc.dart';
 import 'package:flutter_template/src/presentation/widgets/web_qr_scanner_widget.dart';
+import 'package:flutter_template/src/presentation/pages/scanner/scanner_product_form_page.dart';
+import 'package:flutter_template/src/presentation/pages/scanner/scanner_existing_code_page.dart';
+import 'package:flutter_template/src/presentation/pages/inventory_page.dart';
+import 'package:flutter_template/src/presentation/pages/main/home_page.dart';
 import 'package:flutter/foundation.dart';
 
 class ScannerPage extends StatefulWidget {
@@ -18,6 +22,7 @@ class _ScannerPageState extends State<ScannerPage> {
   String _lastScannedCode = '';
   DateTime? _lastScanTime;
   bool _isWebFlashOn = false;
+  WebQRScannerWidget? _webScannerWidget;
 
   @override
   void initState() {
@@ -34,6 +39,37 @@ class _ScannerPageState extends State<ScannerPage> {
 
     // Cargar códigos existentes
     context.read<ScannerBloc>().add(LoadScannedCodes());
+
+    // Listener para reanudar cámara cuando se regresa a esta página
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _setupNavigationListener();
+    });
+  }
+
+  void _setupNavigationListener() {
+    // Este método se ejecutará cuando la página esté visible
+    // y configurará un listener para detectar cuando se regresa
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+
+    // Verificar si estamos regresando de navegación
+    final ModalRoute? route = ModalRoute.of(context);
+    if (route != null && route.isCurrent) {
+      // Estamos en la página actual, verificar si deberíamos reanudar la cámara
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && kIsWeb) {
+          // Si estamos en web, reanudar la cámara
+          WebQRScannerWidget.resumeCamera();
+          setState(() {
+            _isScanning = true;
+          });
+          print('🔄 Cámara reanudada al regresar a la página del escáner');
+        }
+      });
+    }
   }
 
   @override
@@ -99,13 +135,36 @@ class _ScannerPageState extends State<ScannerPage> {
   }
 
   void _showFormWithExistingCode(String code, String type, Map<String, dynamic>? existingCode) {
+    // Pausar la cámara antes de navegar
+    if (kIsWeb) {
+      WebQRScannerWidget.pauseCamera();
+      setState(() {
+        _isScanning = false;
+      });
+    }
+
     if (existingCode != null) {
       // Si el código ya existe, mostrar la información existente
       _showExistingCodeInfo(existingCode);
     } else {
       // Si no existe, mostrar el formulario para crear nuevo
       if (kIsWeb) {
-        _showWebProductForm(code, type);
+        // En web, navegar a página separada en lugar de modal
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (context) => ScannerProductFormPage(
+              code: code,
+              type: type,
+              onProductSaved: () {
+                // Navegar al inventario después de guardar el producto
+                Navigator.of(context).pop(); // Cerrar formulario
+                Navigator.of(context).pop(); // Cerrar escáner
+                // Navegar al inventario (índice 0 en la navegación principal)
+                Navigator.of(context).pushReplacementNamed('/inventory');
+              },
+            ),
+          ),
+        );
       } else {
         _showProductFormDialog(code, type);
       }
@@ -113,138 +172,45 @@ class _ScannerPageState extends State<ScannerPage> {
   }
 
   void _showExistingCodeInfo(Map<String, dynamic> existingCode) {
-    final productName = existingCode['productName'] ?? 'Sin nombre';
-    final productPrice = existingCode['productPrice'] ?? 0.0;
-    final code = existingCode['code'] ?? '';
-    final type = existingCode['type'] ?? '';
-    final scannedAt = existingCode['scannedAt'];
-
-    String formattedDate = 'Fecha desconocida';
-    if (scannedAt != null) {
-      try {
-        final dateTime = DateTime.fromMillisecondsSinceEpoch(scannedAt);
-        formattedDate = '${dateTime.day}/${dateTime.month}/${dateTime.year} ${dateTime.hour}:${dateTime.minute.toString().padLeft(2, '0')}';
-      } catch (e) {
-        formattedDate = 'Fecha desconocida';
-      }
+    // Pausar la cámara antes de navegar
+    if (kIsWeb) {
+      WebQRScannerWidget.pauseCamera();
+      setState(() {
+        _isScanning = false;
+      });
     }
 
     if (kIsWeb) {
-      // Mostrar información en web
-      _showWebExistingCodeInfo(productName, productPrice, code, type, formattedDate);
+      // En web, navegar a página separada en lugar de modal
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) => ScannerExistingCodePage(
+            existingCode: existingCode,
+          ),
+        ),
+      );
     } else {
-      // Mostrar información en móvil
+      // En móvil, mostrar modal como antes
+      final productName = existingCode['productName'] ?? 'Sin nombre';
+      final productPrice = existingCode['productPrice'] ?? 0.0;
+      final code = existingCode['code'] ?? '';
+      final type = existingCode['type'] ?? '';
+      final scannedAt = existingCode['scannedAt'];
+
+      String formattedDate = 'Fecha desconocida';
+      if (scannedAt != null) {
+        try {
+          final dateTime = DateTime.fromMillisecondsSinceEpoch(scannedAt);
+          formattedDate = '${dateTime.day}/${dateTime.month}/${dateTime.year} ${dateTime.hour}:${dateTime.minute.toString().padLeft(2, '0')}';
+        } catch (e) {
+          formattedDate = 'Fecha desconocida';
+        }
+      }
+
       _showMobileExistingCodeInfo(productName, productPrice, code, type, formattedDate);
     }
   }
 
-  void _showWebExistingCodeInfo(String productName, double productPrice, String code, String type, String formattedDate) {
-    final overlay = Overlay.of(context);
-    late OverlayEntry overlayEntry;
-
-    overlayEntry = OverlayEntry(
-      builder: (context) => Positioned(
-        bottom: 0,
-        left: 0,
-        right: 0,
-        child: Material(
-          color: Colors.white,
-          borderRadius: const BorderRadius.only(
-            topLeft: Radius.circular(20),
-            topRight: Radius.circular(20),
-          ),
-          child: Container(
-            padding: const EdgeInsets.all(20),
-            constraints: BoxConstraints(
-              maxHeight: MediaQuery.of(context).size.height * 0.7,
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Header
-                Row(
-                  children: [
-                    Icon(
-                      Icons.info_outline,
-                      color: Colors.orange,
-                      size: 24,
-                    ),
-                    const SizedBox(width: 8),
-                    const Text(
-                      'Producto Ya Registrado',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.orange,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                // Información del producto
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.orange.shade50,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.orange.shade200),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        productName,
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        '\$${productPrice.toStringAsFixed(2)}',
-                        style: const TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.green,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      Text('Código: $code', style: const TextStyle(fontFamily: 'monospace')),
-                      Text('Tipo: $type'),
-                      Text('Registrado: $formattedDate'),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 20),
-                // Botones
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    Expanded(
-                      child: ElevatedButton(
-                        onPressed: () {
-                          overlayEntry.remove();
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.orange,
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                        ),
-                        child: const Text('Entendido'),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-
-    overlay.insert(overlayEntry);
-  }
 
   void _showMobileExistingCodeInfo(String productName, double productPrice, String code, String type, String formattedDate) {
     showDialog(
@@ -479,204 +445,7 @@ class _ScannerPageState extends State<ScannerPage> {
     );
   }
 
-  void _showWebToast(String code, String type) {
-    // Mostrar formulario de producto para web
-    _showWebProductForm(code, type);
-  }
 
-  void _showWebProductForm(String code, String type, {Map<String, dynamic>? existingCode}) {
-    final TextEditingController productNameController = TextEditingController();
-    final TextEditingController productPriceController = TextEditingController();
-
-    // Si hay código existente, pre-llenar los campos
-    if (existingCode != null) {
-      productNameController.text = existingCode['productName'] ?? '';
-      productPriceController.text = existingCode['productPrice']?.toString() ?? '';
-    }
-
-    // Crear un overlay para mostrar el formulario debajo de la cámara
-    final overlay = Overlay.of(context);
-    late OverlayEntry overlayEntry;
-
-    overlayEntry = OverlayEntry(
-      builder: (context) => Positioned(
-        bottom: 0,
-        left: 0,
-        right: 0,
-        child: Material(
-          color: Colors.white,
-          borderRadius: const BorderRadius.only(
-            topLeft: Radius.circular(20),
-            topRight: Radius.circular(20),
-          ),
-          child: Container(
-            padding: const EdgeInsets.all(20),
-            constraints: BoxConstraints(
-              maxHeight: MediaQuery.of(context).size.height * 0.6,
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Header
-                Row(
-                  children: [
-                    Icon(
-                      type == 'QR_CODE' ? Icons.qr_code : Icons.qr_code_2,
-                      color: Theme.of(context).primaryColor,
-                      size: 24,
-                    ),
-                    const SizedBox(width: 8),
-                    const Text(
-                      'Código Escaneado',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                // Información del código
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade100,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Tipo: $type', style: const TextStyle(fontWeight: FontWeight.bold)),
-                      const SizedBox(height: 4),
-                      Text('Código: $code', style: const TextStyle(fontFamily: 'monospace')),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 20),
-                // Campos del formulario
-                Flexible(
-                  child: SingleChildScrollView(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        TextField(
-                          controller: productNameController,
-                          decoration: InputDecoration(
-                            labelText: 'Nombre del Producto (opcional)',
-                            hintText: 'Ej: Coca Cola 350ml',
-                            border: const OutlineInputBorder(),
-                            filled: true,
-                            fillColor: Colors.grey.shade50,
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        TextField(
-                          controller: productPriceController,
-                          decoration: InputDecoration(
-                            labelText: 'Precio (opcional)',
-                            hintText: 'Ej: 1.50',
-                            border: const OutlineInputBorder(),
-                            filled: true,
-                            fillColor: Colors.grey.shade50,
-                            prefixText: '\$ ',
-                          ),
-                          keyboardType: TextInputType.numberWithOptions(decimal: true),
-                        ),
-                        const SizedBox(height: 16),
-                        const Text(
-                          'Completa la información del producto para un mejor seguimiento.',
-                          style: TextStyle(fontSize: 12, color: Colors.grey),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 20),
-                // Botones
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    TextButton(
-                      onPressed: () {
-                        overlayEntry.remove();
-                        // No guardar nada, solo cerrar
-                      },
-                      style: TextButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-                      ),
-                      child: const Text('Cancelar'),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: TextButton(
-                        onPressed: () {
-                          overlayEntry.remove();
-                          // Guardar sin información de producto
-                          context.read<ScannerBloc>().add(
-                            SaveScannedCode(
-                              code: code,
-                              type: type,
-                              content: '',
-                            ),
-                          );
-                        },
-                        style: TextButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                        ),
-                        child: const Text('Guardar Simple'),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: ElevatedButton(
-                        onPressed: () {
-                          overlayEntry.remove();
-
-                          // Obtener valores de los campos
-                          final productName = productNameController.text.trim();
-                          final productPrice = double.tryParse(productPriceController.text.trim()) ?? 0.0;
-
-                          // Guardar con información de producto
-                          context.read<ScannerBloc>().add(
-                            SaveScannedCode(
-                              code: code,
-                              type: type,
-                              content: '',
-                              productName: productName.isNotEmpty ? productName : null,
-                              productPrice: productPrice > 0 ? productPrice : null,
-                            ),
-                          );
-
-                          // Mostrar confirmación
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                productName.isNotEmpty && productPrice > 0
-                                    ? 'Producto "$productName" guardado con precio \$${productPrice.toStringAsFixed(2)}'
-                                    : 'Código guardado ${productName.isNotEmpty ? 'con producto' : 'sin producto'}',
-                              ),
-                              backgroundColor: Colors.green,
-                            ),
-                          );
-                        },
-                        style: ElevatedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                        ),
-                        child: const Text('Guardar Producto'),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-
-    overlay.insert(overlayEntry);
-  }
 
   void _toggleTorch() {
     if (!kIsWeb) {
@@ -739,7 +508,7 @@ class _ScannerPageState extends State<ScannerPage> {
   }
 
   Widget _buildWebScanner() {
-    return WebQRScannerWidget(
+    _webScannerWidget = WebQRScannerWidget(
       onCodeScanned: (code, type) {
         // Procesar el código escaneado desde web
         final now = DateTime.now();
@@ -756,6 +525,9 @@ class _ScannerPageState extends State<ScannerPage> {
           _lastScanTime = now;
         });
 
+        // Pausar la cámara inmediatamente al detectar un código
+        WebQRScannerWidget.pauseCamera();
+
         // Mostrar formulario para completar información del producto
         _showScanConfirmation(code, type, checkExisting: true);
       },
@@ -763,6 +535,8 @@ class _ScannerPageState extends State<ScannerPage> {
       isFlashOn: _isWebFlashOn,
       onFlashToggle: _toggleWebFlash,
     );
+
+    return _webScannerWidget!;
   }
 
   Widget _buildMobileScanner() {
@@ -890,6 +664,49 @@ class _ScannerPageState extends State<ScannerPage> {
             state.scannedCode['type'],
             state.existingCode,
           );
+        } else if (state is AdminCanCreateProduct) {
+          // Mostrar formulario para que admin cree producto
+          _showAdminProductCreationForm(
+            state.code,
+            state.type,
+            state.existingCode,
+          );
+        } else if (state is ProductCreated) {
+          // Mostrar confirmación de producto creado
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Producto "${state.product.name}" creado exitosamente'),
+              backgroundColor: Colors.green,
+              duration: const Duration(seconds: 3),
+            ),
+          );
+        } else if (state is ProductCreationError) {
+          // Mostrar error en creación de producto
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error al crear producto: ${state.error}'),
+              backgroundColor: Colors.red,
+              duration: const Duration(seconds: 3),
+            ),
+          );
+        } else if (state is SaleSuccess) {
+          // Mostrar mensaje de venta exitosa
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Venta realizada exitosamente. Total: \$${state.sale.total.toStringAsFixed(2)}'),
+              backgroundColor: Colors.green,
+              duration: const Duration(seconds: 3),
+            ),
+          );
+        } else if (state is SaleError) {
+          // Mostrar mensaje de error en venta
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error en venta: ${state.error}'),
+              backgroundColor: Colors.red,
+              duration: const Duration(seconds: 3),
+            ),
+          );
         }
       },
       child: BlocBuilder<ScannerBloc, ScannerState>(
@@ -970,6 +787,23 @@ class _ScannerPageState extends State<ScannerPage> {
               ],
             ),
           );
+        } else if (state is SaleSuccess) {
+          // Venta exitosa, mostrar mensaje (ya manejado en listener)
+          return const Center(
+            child: Text('Venta procesada exitosamente'),
+          );
+        } else if (state is SaleError) {
+          // Error en venta, mostrar mensaje (ya manejado en listener)
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.error_outline, size: 48, color: Colors.red[300]),
+                const SizedBox(height: 8),
+                Text('Error en venta: ${state.error}'),
+              ],
+            ),
+          );
         }
         return const Center(child: Text('Cargando códigos...'));
       },
@@ -1004,4 +838,219 @@ class _ScannerPageState extends State<ScannerPage> {
       return 'Desconocido';
     }
   }
+
+  void _showAdminProductCreationForm(String code, String type, Map<String, dynamic>? existingCode) {
+    if (kIsWeb) {
+      // En web, navegar a página separada en lugar de modal
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) => ScannerProductFormPage(
+            code: code,
+            type: type,
+            existingCode: existingCode,
+            onProductSaved: () {
+              // Volver a la navegación principal después de guardar el producto
+              Navigator.of(context).pop(); // Cerrar formulario
+              Navigator.of(context).pop(); // Cerrar escáner
+
+              // Volver a la página principal con toda la navegación
+              Navigator.of(context).pushAndRemoveUntil(
+                MaterialPageRoute(builder: (context) => const HomePage()),
+                (route) => false, // Remover todas las rutas anteriores
+              );
+            },
+          ),
+        ),
+      );
+    } else {
+      // En móvil, mostrar modal como antes
+      final TextEditingController productNameController = TextEditingController();
+      final TextEditingController productPriceController = TextEditingController();
+      final TextEditingController descriptionController = TextEditingController();
+
+      // Si hay código existente, pre-llenar los campos
+      if (existingCode != null) {
+        productNameController.text = existingCode['productName'] ?? '';
+        productPriceController.text = existingCode['productPrice']?.toString() ?? '';
+      }
+
+      _showMobileAdminProductForm(code, type, productNameController, productPriceController, descriptionController);
+    }
+  }
+
+  void _showMobileAdminProductForm(
+    String code,
+    String type,
+    TextEditingController productNameController,
+    TextEditingController productPriceController,
+    TextEditingController descriptionController,
+  ) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom,
+          left: 16,
+          right: 16,
+          top: 16,
+        ),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.only(
+            topLeft: Radius.circular(20),
+            topRight: Radius.circular(20),
+          ),
+        ),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header
+              Row(
+                children: [
+                  Icon(
+                    Icons.admin_panel_settings,
+                    color: Colors.orange,
+                    size: 24,
+                  ),
+                  const SizedBox(width: 8),
+                  const Text(
+                    'Crear Producto',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.orange,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              // Información del código
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.orange.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.orange.shade200),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Tipo: $type', style: const TextStyle(fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 4),
+                    Text('Código: $code', style: const TextStyle(fontFamily: 'monospace')),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+              // Campos del formulario
+              TextField(
+                controller: productNameController,
+                decoration: InputDecoration(
+                  labelText: 'Nombre del Producto *',
+                  hintText: 'Ej: Coca Cola 350ml',
+                  border: const OutlineInputBorder(),
+                  filled: true,
+                  fillColor: Colors.grey.shade50,
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: productPriceController,
+                decoration: InputDecoration(
+                  labelText: 'Precio *',
+                  hintText: 'Ej: 1.50',
+                  border: const OutlineInputBorder(),
+                  filled: true,
+                  fillColor: Colors.grey.shade50,
+                  prefixText: '\$ ',
+                ),
+                keyboardType: TextInputType.numberWithOptions(decimal: true),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: descriptionController,
+                decoration: InputDecoration(
+                  labelText: 'Descripción (opcional)',
+                  hintText: 'Ej: Bebida gaseosa sabor cola',
+                  border: const OutlineInputBorder(),
+                  filled: true,
+                  fillColor: Colors.grey.shade50,
+                ),
+                maxLines: 2,
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Los campos marcados con * son obligatorios.',
+                style: TextStyle(fontSize: 12, color: Colors.grey),
+              ),
+              const SizedBox(height: 20),
+              // Botones
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  Expanded(
+                    child: TextButton(
+                      onPressed: () {
+                        Navigator.pop(context);
+                        // No crear producto, solo cerrar
+                      },
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
+                      child: const Text('Cancelar'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () {
+                        Navigator.pop(context);
+
+                        // Validar campos obligatorios
+                        final productName = productNameController.text.trim();
+                        final productPrice = double.tryParse(productPriceController.text.trim()) ?? 0.0;
+
+                        if (productName.isEmpty || productPrice <= 0) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Por favor complete los campos obligatorios'),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                          return;
+                        }
+
+                        // Crear producto
+                        context.read<ScannerBloc>().add(
+                          CreateProductFromScan(
+                            code: code,
+                            type: type,
+                            productName: productName,
+                            productPrice: productPrice,
+                            description: descriptionController.text.trim(),
+                          ),
+                        );
+                      },
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        backgroundColor: Colors.orange,
+                      ),
+                      child: const Text('Crear Producto'),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
 }

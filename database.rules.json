@@ -22,8 +22,26 @@
       ".write": "auth != null"
     },
     "config": {
-      ".read": "auth != null",
-      ".write": "auth != null"
-    }
+       ".read": "auth != null",
+       ".write": "auth != null"
+     },
+     "products": {
+       ".read": "auth != null",
+       ".write": "auth != null",
+       ".indexOn": ["name", "price", "stock", "barcode"],
+       "$productId": {
+         ".read": "auth != null",
+         ".write": "auth != null"
+       }
+     },
+     "sales": {
+       ".read": "auth != null",
+       ".write": "auth != null",
+       ".indexOn": ["userId", "date", "productId"],
+       "$saleId": {
+         ".read": "auth != null",
+         ".write": "auth != null"
+       }
+     }
   }
 }

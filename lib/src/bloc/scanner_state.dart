@@ -67,3 +67,54 @@ class ScannerError extends ScannerState {
   @override
   List<Object> get props => [error];
 }
+
+class SaleSuccess extends ScannerState {
+  final Sale sale;
+
+  const SaleSuccess(this.sale);
+
+  @override
+  List<Object> get props => [sale];
+}
+
+class SaleError extends ScannerState {
+  final String error;
+
+  const SaleError(this.error);
+
+  @override
+  List<Object> get props => [error];
+}
+
+class ProductCreated extends ScannerState {
+  final Product product;
+
+  const ProductCreated(this.product);
+
+  @override
+  List<Object> get props => [product];
+}
+
+class ProductCreationError extends ScannerState {
+  final String error;
+
+  const ProductCreationError(this.error);
+
+  @override
+  List<Object> get props => [error];
+}
+
+class AdminCanCreateProduct extends ScannerState {
+  final String code;
+  final String type;
+  final Map<String, dynamic>? existingCode;
+
+  const AdminCanCreateProduct({
+    required this.code,
+    required this.type,
+    this.existingCode,
+  });
+
+  @override
+  List<Object> get props => [code, type, existingCode ?? {}];
+}

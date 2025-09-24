@@ -59,3 +59,22 @@ class DeleteScannedCode extends ScannerEvent {
 }
 
 class SyncWithServer extends ScannerEvent {}
+
+class CreateProductFromScan extends ScannerEvent {
+  final String code;
+  final String type;
+  final String? productName;
+  final double? productPrice;
+  final String? description;
+
+  const CreateProductFromScan({
+    required this.code,
+    required this.type,
+    this.productName,
+    this.productPrice,
+    this.description,
+  });
+
+  @override
+  List<Object> get props => [code, type, productName ?? '', productPrice ?? 0.0, description ?? ''];
+}

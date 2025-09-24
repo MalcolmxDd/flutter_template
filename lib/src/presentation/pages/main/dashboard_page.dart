@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_template/src/bloc/users_bloc.dart';
+import 'package:flutter_template/src/presentation/pages/inventory_page.dart';
 import 'package:flutter_template/src/presentation/widgets/dashboard_grid.dart';
 import 'package:flutter_template/src/presentation/widgets/weekly_activity_chart.dart';
 
@@ -74,10 +75,19 @@ class _DashboardPageState extends State<DashboardPage> {
           DashboardGrid(
             isAdmin: isAdmin,
             onUsersManagementTap: () {
-              // Navegar a la página de usuarios (índice 2)
+              // Navegar a la página de usuarios (índice 4)
               if (widget.onNavigateToPage != null) {
-                widget.onNavigateToPage!(2);
+                widget.onNavigateToPage!(4);
               }
+            },
+            onInventoryTap: () {
+              // Navegar a la página de inventario
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const InventoryPage(),
+                ),
+              );
             },
           ),
         ],

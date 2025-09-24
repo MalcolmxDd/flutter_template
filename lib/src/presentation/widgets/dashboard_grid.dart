@@ -1,13 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_template/src/presentation/pages/scanner/codes_history_page.dart';
+import 'package:flutter_template/src/presentation/pages/scanner/scanner_page.dart';
 
 class DashboardGrid extends StatelessWidget {
   final bool isAdmin;
   final VoidCallback? onUsersManagementTap;
+  final VoidCallback? onInventoryTap;
 
   const DashboardGrid({
     super.key,
     required this.isAdmin,
     this.onUsersManagementTap,
+    this.onInventoryTap,
   });
 
   @override
@@ -29,30 +33,38 @@ class DashboardGrid extends StatelessWidget {
       children: [
         _buildDashboardCard(
           context,
+          icon: Icons.inventory,
+          label: 'Inventario',
+          color: Colors.purple,
+          onTap: onInventoryTap,
+        ),
+        _buildDashboardCard(
+          context,
+          icon: Icons.qr_code_scanner,
+          label: 'Historial de Escaneos',
+          color: Colors.blue,
+          onTap: () {
+            // Navegar a la página de historial de códigos
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const CodesHistoryPage(),
+              ),
+            );
+          },
+        ),
+        _buildDashboardCard(
+          context,
           icon: Icons.people_outline,
           label: 'Gestionar Usuarios',
-          color: Colors.blue,
-          onTap: onUsersManagementTap, // Usar el callback directamente
-        ),
-        _buildDashboardCard(
-          context,
-          icon: Icons.analytics_outlined,
-          label: 'Estadísticas',
           color: Colors.green,
-          onTap: () {},
+          onTap: onUsersManagementTap,
         ),
         _buildDashboardCard(
           context,
-          icon: Icons.settings_system_daydream_outlined,
-          label: 'Configuración del Sistema',
+          icon: Icons.analytics,
+          label: 'Reportes',
           color: Colors.orange,
-          onTap: () {},
-        ),
-        _buildDashboardCard(
-          context,
-          icon: Icons.security_outlined,
-          label: 'Seguridad',
-          color: Colors.red,
           onTap: () {},
         ),
       ],
@@ -69,30 +81,46 @@ class DashboardGrid extends StatelessWidget {
       children: [
         _buildDashboardCard(
           context,
-          icon: Icons.bar_chart,
-          label: 'Estadísticas',
-          color: Colors.orange,
-          onTap: () {},
+          icon: Icons.qr_code_scanner,
+          label: 'Escanear Productos',
+          color: Colors.blue,
+          onTap: () {
+            // Navegar a la página del escáner
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const ScannerPage(),
+              ),
+            );
+          },
         ),
         _buildDashboardCard(
           context,
           icon: Icons.history,
-          label: 'Actividad Reciente',
+          label: 'Mis Escaneos',
           color: Colors.green,
-          onTap: () {},
+          onTap: () {
+            // Navegar a la página de historial de códigos
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const CodesHistoryPage(),
+              ),
+            );
+          },
         ),
         _buildDashboardCard(
           context,
-          icon: Icons.content_paste,
-          label: 'Reportes',
-          color: Colors.blue,
-          onTap: () {},
-        ),
-        _buildDashboardCard(
-          context,
-          icon: Icons.people_outline,
-          label: 'Clientes',
+          icon: Icons.inventory,
+          label: 'Inventario',
           color: Colors.purple,
+          onTap: onInventoryTap,
+        ),
+        _buildDashboardCard(
+          context,
+          icon: Icons.point_of_sale,
+          label: 'Ventas',
+          color: Colors.orange,
           onTap: () {},
         ),
       ],
